@@ -3,8 +3,8 @@
   "version": "../package.json",
   "identifier": "dev.tormak.steam-art-manager",
   "build": {
-    "beforeDevCommand": "bun dev",
-    "beforeBuildCommand": "bun run build",
+    "beforeDevCommand": "npm run dev",
+    "beforeBuildCommand": "npm run build",
     "frontendDist": "../dist",
     "devUrl": "http://localhost:1420"
   },
@@ -60,7 +60,7 @@
       "dangerousDisableAssetCspModification": [
         "style-src"
       ],
-      "csp": "default-src 'self'; img-src 'self' asset: http://asset.localhost https://steamcdn-a.akamaihd.net https://*.steamgriddb.com; media-src 'self' asset: http://asset.localhost https://steamcdn-a.akamaihd.net https://*.steamgriddb.com; style-src 'self' 'unsafe-inline'; connect-src ipc: http://ipc.localhost"
+      "csp": "default-src 'self'; img-src 'self' asset: http://asset.localhost https://steamcdn-a.akamaihd.net https://*.steamgriddb.com; media-src 'self' asset: http://asset.localhost https://steamcdn-a.akamaihd.net https://*.steamgriddb.com; style-src 'self' 'unsafe-inline'; connect-src ipc: http://ipc.localhost https://*.steamgriddb.com"
     }
   },
   "plugins": {
