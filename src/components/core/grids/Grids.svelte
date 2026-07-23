@@ -3,7 +3,7 @@
   import { Check, Edit, Options, Position, Steam, Upload } from "@icons";
   import { DropDown, IconButton, Menu } from "@interactables";
   import { currentPlatform, customGameNames, dbFilters, gridsSize, gridType, isOnline, loadingSettings, manualSteamGames, needsSGDBAPIKey, nonSteamGames, selectedGameAppId, selectedGameName, selectedSteamGridGameId, showCachedGrids, steamGames, steamGridDBKey, steamGridSearchCache } from "@stores/AppState";
-  import { showLogoPositionModal, showOriginalGridsModal } from "@stores/Modals";
+  import { showLogoPositionModal, showLogoStyleOverrideModal, showOriginalGridsModal } from "@stores/Modals";
   import * as dialog from "@tauri-apps/plugin-dialog";
   import { GridTypes, type SGDBGame } from "@types";
   import { debounce } from "@utils";
@@ -31,6 +31,7 @@
   $: menuOptions = [
     { label: "View Original Grids", icon: Steam, onClick: () => { $showOriginalGridsModal = true; } },
     { label: "Set Logo Position", icon: Position, onClick: () => { $showLogoPositionModal = true; } },
+    { label: "Set Logo Style", icon: Edit, onClick: () => { $showLogoStyleOverrideModal = true; } },
     { label: "Upload Local Art", icon: Upload, onClick: prompUserForArt },
     { label: "Show Selected Grids", icon: $showCachedGrids ? Check : undefined, onClick: () => { $showCachedGrids = !$showCachedGrids; } }
   ]

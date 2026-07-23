@@ -21,7 +21,7 @@ import { createTippy } from "svelte-tippy";
 import { get } from "svelte/store";
 import { hideAll, type Instance, type Props } from "tippy.js";
 import "tippy.js/dist/tippy.css";
-import { Platforms, activeUserId, appLibraryCache, cacheSelectedGrids, canSave, currentPlatform, customGameNames, gridType, isOnline, loadingGames, logoStyleDomSelectors, logoStyleShadowStyle, logoStyleThemeCssPath, manualSteamGames, needsSGDBAPIKey, needsSteamKey, nonSteamGames, originalAppLibraryCache, originalLogoPositions, originalSteamShortcuts, selectedGameAppId, selectedGameName, showErrorSnackbar, showInfoSnackbar, steamGames, steamKey, steamLogoPositions, steamShortcuts, steamUsers, unfilteredLibraryCache } from "../../stores/AppState";
+import { Platforms, activeUserId, appLibraryCache, cacheSelectedGrids, canSave, currentPlatform, customGameNames, gridType, isOnline, loadingGames, logoStyleDomSelectors, logoStyleOverrides, logoStyleShadowStyle, logoStyleThemeCssPath, manualSteamGames, needsSGDBAPIKey, needsSteamKey, nonSteamGames, originalAppLibraryCache, originalLogoPositions, originalSteamShortcuts, selectedGameAppId, selectedGameName, showErrorSnackbar, showInfoSnackbar, steamGames, steamKey, steamLogoPositions, steamShortcuts, steamUsers, unfilteredLibraryCache } from "../../stores/AppState";
 import { cleanConflicts, gameSearchModalCancel, gameSearchModalDefault, gameSearchModalSelect, gridModalInfo, showCleanConflictDialog, showGameSearchModal, showGridModal, showSettingsModal } from "../../stores/Modals";
 import { CacheController } from "./CacheController";
 import { SteamController } from "./SteamController";
@@ -115,10 +115,9 @@ export class AppController {
       }
     }
 
+    const currentLogoStyleOverrides = get(logoStyleOverrides);
     const themeCssPath = get(logoStyleThemeCssPath);
-    // TODO Logo Style Overrides aren't stored yet - always empty until that store exists.
-    const logoStyleOverrides: Record<string, LogoStyleOverride> = {};
-    const themeCss = themeCssPath !== "" ? compileLogoStyleTheme(logoStyleOverrides, get(logoStyleShadowStyle), get(logoStyleDomSelectors)) : "";
+    const themeCss = themeCssPath !== "" ? compileLogoStyleTheme(currentLogoStyleOverrides, get(logoStyleShadowStyle), get(logoStyleDomSelectors)) : "";
 
     const changedPaths = await RustInterop.saveChanges(get(activeUserId).toString(), libraryCache, originalCache, shortcuts, shortcutIcons, originalShortcutIcons, logoPosStrings, themeCssPath, themeCss);
     
@@ -149,7 +148,9 @@ export class AppController {
       const logoPos = Object.fromEntries(logoPosEntries);
       originalLogoPositions.set(structuredClone(logoPos));
       steamLogoPositions.set(structuredClone(logoPos));
-      
+
+      await SettingsController.set("logoStyleOverrides", currentLogoStyleOverrides);
+
       get(showInfoSnackbar)({ message: "Changes saved" });
       LogController.log("Saved changes.");
     }
@@ -428,6 +429,35 @@ export class AppController {
     canSave.set(true);
 
     LogController.log(`Updated logo position for game ${appId}`);
+  }
+
+  /**
+   * Clears the Logo Style Override for a given app.
+   * @param appid The id of the app to clear the Logo Style Override of.
+   */
+  static clearLogoStyleOverride(appid: string): void {
+    const overrides = get(logoStyleOverrides);
+    delete overrides[appid];
+    logoStyleOverrides.set(structuredClone(overrides));
+
+    LogController.log(`Cleared Logo Style Override for ${appid}`);
+
+    canSave.set(true);
+  }
+
+  /**
+   * Sets the Logo Style Override for the provided game.
+   * @param appId The id of the app to save the Logo Style Override for.
+   * @param override The Logo Style Override to set.
+   */
+  static setLogoStyleOverride(appId: string, override: LogoStyleOverride): void {
+    const overrides = get(logoStyleOverrides);
+    overrides[appId] = override;
+
+    logoStyleOverrides.set(structuredClone(overrides));
+    canSave.set(true);
+
+    LogController.log(`Updated Logo Style Override for game ${appId}`);
   }
 
   /**

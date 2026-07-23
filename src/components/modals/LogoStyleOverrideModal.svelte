@@ -1,0 +1,225 @@
+<script lang="ts">
+  import { AppController } from "@controllers";
+  import { Button, DropDown, NumberInput, Toggle } from "@interactables";
+  import { appLibraryCache, logoStyleOverrides, logoStyleShadowStyle, manualSteamGames, nonSteamGames, selectedGameAppId, steamGames, unfilteredLibraryCache } from "@stores/AppState";
+  import { showLogoStyleOverrideModal } from "@stores/Modals";
+  import { convertFileSrc } from "@tauri-apps/api/core";
+  import type { AnchorPosition, LogoStyleOverride } from "@types";
+  import { IMAGE_FADE_OPTIONS } from "@utils";
+  import { onMount } from "svelte";
+  import { fade } from "svelte/transition";
+  import ModalBody from "./modal-utils/ModalBody.svelte";
+
+  /**
+   * The function to run when the modal closes.
+   */
+  function onClose(): void {
+    $showLogoStyleOverrideModal = false;
+  }
+
+  const anchors: AnchorPosition[] = [
+    "TopLeft", "TopCenter", "TopRight",
+    "CenterLeft", "CenterCenter", "CenterRight",
+    "BottomLeft", "BottomCenter", "BottomRight",
+  ];
+  const anchorOptions = anchors.map((anchorPos: AnchorPosition) => {
+    return {
+      label: anchorPos.split(/(?=[A-Z])/).join(" "),
+      data: anchorPos
+    }
+  });
+
+  $: games = [ ...$steamGames, ...$manualSteamGames, ...$nonSteamGames ];
+  $: game = games.find((game) => game.appid.toString() === $selectedGameAppId)!;
+  let heroPath = "";
+  let logoPath = "";
+
+  let open = true;
+
+  const existingOverride = $logoStyleOverrides[$selectedGameAppId];
+
+  const originalShadow = existingOverride?.shadow ?? false;
+  const originalHasPosition = !!existingOverride?.position;
+  const originalAnchor: AnchorPosition = existingOverride?.position?.anchor ?? "CenterCenter";
+  const originalOffsetX = existingOverride?.position?.offsetX ?? 0;
+  const originalOffsetY = existingOverride?.position?.offsetY ?? 0;
+
+  let shadow = originalShadow;
+  let hasPosition = originalHasPosition;
+  let anchor = originalAnchor;
+  let offsetX = originalOffsetX;
+  let offsetY = originalOffsetY;
+
+  $: canClear = !!existingOverride;
+  $: canSave = shadow !== originalShadow
+    || hasPosition !== originalHasPosition
+    || (hasPosition && (anchor !== originalAnchor || offsetX !== originalOffsetX || offsetY !== originalOffsetY));
+
+  const widths = {
+    "Hero": 59.75,
+    "Logo": 12.5
+  };
+
+  const heights = {
+    "Hero": 21.375,
+    "Logo": 25.125
+  };
+
+  /**
+   * Gets the preview alignment for the given anchor.
+   * @param anchorPos The anchor to align the preview to.
+   */
+  function getPreviewAlign(anchorPos: AnchorPosition): { justifyContent: string, alignItems: string } {
+    return {
+      justifyContent: anchorPos.includes("Left") ? "flex-start" : anchorPos.includes("Right") ? "flex-end" : "center",
+      alignItems: anchorPos.includes("Top") ? "flex-start" : anchorPos.includes("Bottom") ? "flex-end" : "center",
+    };
+  }
+
+  $: previewAlign = getPreviewAlign(anchor);
+  $: previewTransform = hasPosition ? `translate(${offsetX}px, ${offsetY}px)` : "none";
+  $: previewFilter = shadow ? $logoStyleShadowStyle : "none";
+
+  /**
+   * Apply the Logo Style Override changes.
+   */
+  function applyChanges(): void {
+    const override: LogoStyleOverride = hasPosition
+      ? { shadow, position: { anchor, offsetX, offsetY } }
+      : { shadow };
+
+    AppController.setLogoStyleOverride($selectedGameAppId, override);
+    onClose();
+  }
+
+  /**
+   * Clears any Logo Style Override made to this game.
+   */
+  function clearOverride(): void {
+    AppController.clearLogoStyleOverride($selectedGameAppId);
+    onClose();
+  }
+
+  onMount(() => {
+    if ($appLibraryCache[$selectedGameAppId]?.Hero) {
+      if ($appLibraryCache[$selectedGameAppId].Hero === "REMOVE") {
+        const heroImagePath = $unfilteredLibraryCache[$selectedGameAppId].Hero;
+        heroPath = heroImagePath ? convertFileSrc(heroImagePath) : "";
+      } else {
+        heroPath = convertFileSrc($appLibraryCache[$selectedGameAppId].Hero);
+      }
+    } else {
+      heroPath = "";
+    }
+
+    if ($appLibraryCache[$selectedGameAppId]?.Logo) {
+      if ($appLibraryCache[$selectedGameAppId].Logo === "REMOVE") {
+        const logoImagePath = $unfilteredLibraryCache[$selectedGameAppId].Logo;
+        logoPath = logoImagePath ? convertFileSrc(logoImagePath) : "";
+      } else {
+        logoPath = convertFileSrc($appLibraryCache[$selectedGameAppId].Logo);
+      }
+    }
+  });
+</script>
+
+<ModalBody title={`Set Logo Style for ${game?.name}`} open={open} on:close={() => open = false} on:closeEnd={onClose}>
+  <div class="content">
+    <div class="view">
+      <div class="hero-cont">
+        <div class="img" class:missing-background={heroPath === ""} style="max-height: {heights.Hero}rem;">
+          {#if heroPath !== ""}
+            <img src="{heroPath}" alt="Hero image for {game?.name}" style="max-width: {widths.Hero}rem; max-height: {heights.Hero}rem; width: auto; height: auto;" />
+          {/if}
+        </div>
+      </div>
+      <div class="logo-cont" style="justify-content: {previewAlign.justifyContent}; align-items: {previewAlign.alignItems};">
+        <img in:fade={IMAGE_FADE_OPTIONS} src="{logoPath}" alt="Logo image for {game?.name}" style="max-height: {heights.Logo}%; max-width: {widths.Logo}%; width: auto; height: auto; transform: {previewTransform}; filter: {previewFilter};" />
+      </div>
+    </div>
+    <div class="interactables">
+      <Toggle label="Shadow" bind:value={shadow} />
+      <Toggle label="Custom Position" bind:value={hasPosition} />
+      {#if hasPosition}
+        <div class="anchor">
+          <DropDown label="Anchor" options={anchorOptions} bind:value={anchor} width="8.75rem" direction="UP" />
+        </div>
+        <NumberInput label="X Offset" bind:value={offsetX} />
+        <NumberInput label="Y Offset" bind:value={offsetY} />
+      {/if}
+    </div>
+    <div class="buttons">
+      {#if canClear}
+        <Button on:click={applyChanges} width="11.5rem" disabled={!canSave}>Save</Button>
+        <Button on:click={clearOverride} width="6.5rem">Reset</Button>
+      {:else}
+        <Button on:click={applyChanges} width="18.75rem" disabled={!canSave}>Save</Button>
+      {/if}
+    </div>
+  </div>
+</ModalBody>
+
+<style>
+  .content {
+    min-width: 12.5rem;
+    min-height: calc(100% - 1.25rem);
+
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+
+  .view {
+    width: 100%;
+    position: relative;
+    margin: 0.625rem 0;
+
+    display: flex;
+  }
+
+  .logo-cont {
+    position: absolute;
+    display: flex;
+    width: 100%;
+    height: 100%;
+  }
+
+  .hero-cont > .img {
+    border-radius: 0.125rem;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .missing-background {
+    width: 59.75rem;
+    height: 21.375rem;
+    border-radius: 0.125rem;
+    background-color: #a3a3a3;
+    background-image: linear-gradient(140deg, #adadad 0%, #727272 50%, #535353 75%);
+  }
+
+  .interactables {
+    width: calc(100% - 1.25rem);
+    padding: 0rem 0.625rem;
+
+    display: flex;
+    align-items: center;
+
+    gap: 1rem;
+  }
+
+  .buttons {
+    width: calc(100% - 1.25rem);
+    padding: 0rem 0.625rem;
+
+    display: flex;
+    align-items: center;
+
+    gap: 0.5rem;
+  }
+
+  .anchor { width: 13.75rem; }
+</style>

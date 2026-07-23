@@ -16,7 +16,7 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>
  */
 import { DEFAULT_SETTINGS } from "@models";
-import { activeUserId, appTypes, cacheSelectedGrids, customGameNames, dbFilters, debugMode, gamesSize, gridImageSize, gridsSize, gridType, hiddenGameIds, loadingSettings, logoStyleDomSelectors, logoStyleShadowStyle, logoStyleThemeCssPath, manualSteamGames, needsSGDBAPIKey, needsSteamKey, optionsSize, renderGamesInList, selectedCleanGridsPreset, selectedManualGamesAddMethod, showCachedGrids, showHidden, showInfoSnackbar, steamGridDBKey, steamInstallPath, steamKey, steamUsers, theme, userSelectedGrids } from "@stores/AppState";
+import { activeUserId, appTypes, cacheSelectedGrids, customGameNames, dbFilters, debugMode, gamesSize, gridImageSize, gridsSize, gridType, hiddenGameIds, loadingSettings, logoStyleDomSelectors, logoStyleOverrides, logoStyleShadowStyle, logoStyleThemeCssPath, manualSteamGames, needsSGDBAPIKey, needsSteamKey, optionsSize, renderGamesInList, selectedCleanGridsPreset, selectedManualGamesAddMethod, showCachedGrids, showHidden, showInfoSnackbar, steamGridDBKey, steamInstallPath, steamKey, steamUsers, theme, userSelectedGrids } from "@stores/AppState";
 import { path } from "@tauri-apps/api";
 import * as fs from "@tauri-apps/plugin-fs";
 import { exit } from "@tauri-apps/plugin-process";
@@ -366,6 +366,12 @@ export class SettingsController {
       const logoStyleDomSelectorsSetting = SettingsController.settings.logoStyleDomSelectors;
       SettingsController.oldValues["logoStyleDomSelectors"] = structuredClone(logoStyleDomSelectorsSetting);
       logoStyleDomSelectors.set(logoStyleDomSelectorsSetting);
+
+      // * logoStyleOverrides is loaded here but deliberately NOT subscribed in registerSubs() below -
+      // * like steamLogoPositions, it stages in-memory and is only persisted by AppController.saveChanges().
+      const logoStyleOverridesSetting = SettingsController.settings.logoStyleOverrides;
+      SettingsController.oldValues["logoStyleOverrides"] = structuredClone(logoStyleOverridesSetting);
+      logoStyleOverrides.set(structuredClone(logoStyleOverridesSetting));
 
       const gameViewTypeSetting = SettingsController.settings.windowSettings.main.gameViewType;
       SettingsController.oldValues["windowSettings.main.gameViewType"] = gameViewTypeSetting;

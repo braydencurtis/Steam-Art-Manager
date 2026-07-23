@@ -171,6 +171,7 @@ export const DEFAULT_SETTINGS: Settings = {
   logoStyleThemeCssPath: "",
   logoStyleShadowStyle: DEFAULT_LOGO_SHADOW_STYLE,
   logoStyleDomSelectors: DEFAULT_LOGO_STYLE_DOM_SELECTORS,
+  logoStyleOverrides: {},
 
   theme: 0,
   showHiddenGames: false,

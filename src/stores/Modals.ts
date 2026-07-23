@@ -56,4 +56,6 @@ export const showUpdateTilesModal = writable(false);
 
 export const showLogoPositionModal = writable(false);
 
+export const showLogoStyleOverrideModal = writable(false);
+
 export const showOriginalGridsModal = writable(false);
