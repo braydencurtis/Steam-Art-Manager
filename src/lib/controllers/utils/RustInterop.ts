@@ -241,13 +241,15 @@ export class RustInterop {
    * @param shortcutIcons The map of shortcutIds to updated icons.
    * @param changedLogoPositions The changed logo positions.
    * @param originalShortcutIcons The map of shortcutIds to original icons.
+   * @param logoStyleThemeCssPath The configured Logo Style Theme CSS output path, or "" if unconfigured.
+   * @param logoStyleThemeCss The compiled Logo Style Theme CSS contents to write, or "" if unconfigured.
    * @returns A promise resolving to a string of serialized changed tuples.
    */
-  static async saveChanges(activeUserId: string, currentArt: Record<string, LibraryCacheEntry>, originalArt: Record<string, LibraryCacheEntry>, shortcuts: SteamShortcut[], shortcutIcons: Record<string, string>, originalShortcutIcons: Record<string, string>, changedLogoPositions: Record<string, string>): Promise<ChangedPath[] | { error: string }> {
+  static async saveChanges(activeUserId: string, currentArt: Record<string, LibraryCacheEntry>, originalArt: Record<string, LibraryCacheEntry>, shortcuts: SteamShortcut[], shortcutIcons: Record<string, string>, originalShortcutIcons: Record<string, string>, changedLogoPositions: Record<string, string>, logoStyleThemeCssPath: string, logoStyleThemeCss: string): Promise<ChangedPath[] | { error: string }> {
     const shortcutsObj = {
       "shortcuts": { ...shortcuts }
     }
-    const res = await invoke<string>("save_changes", { steamPath: RustInterop.steamPath, currentArt: JSON.stringify(currentArt), originalArt: JSON.stringify(originalArt), shortcutsStr: JSON.stringify(shortcutsObj), steamActiveUserId: activeUserId, shortcutIcons: shortcutIcons, originalShortcutIcons: originalShortcutIcons, changedLogoPositions: changedLogoPositions });
+    const res = await invoke<string>("save_changes", { steamPath: RustInterop.steamPath, currentArt: JSON.stringify(currentArt), originalArt: JSON.stringify(originalArt), shortcutsStr: JSON.stringify(shortcutsObj), steamActiveUserId: activeUserId, shortcutIcons: shortcutIcons, originalShortcutIcons: originalShortcutIcons, changedLogoPositions: changedLogoPositions, logoStyleThemeCssPath: logoStyleThemeCssPath, logoStyleThemeCss: logoStyleThemeCss });
     return JSON.parse(res);
   }
 

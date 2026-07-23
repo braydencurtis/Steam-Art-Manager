@@ -176,6 +176,8 @@ pub async fn save_changes(
     shortcut_icons: Map<String, Value>,
     original_shortcut_icons: Map<String, Value>,
     changed_logo_positions: Map<String, Value>,
+    logo_style_theme_css_path: String,
+    logo_style_theme_css: String,
 ) -> String {
     let current_art_dict: GridImageCache = serde_json::from_str(current_art.as_str()).unwrap();
     let original_art_dict: GridImageCache = serde_json::from_str(original_art.as_str()).unwrap();
@@ -299,6 +301,29 @@ pub async fn save_changes(
                 0,
             );
         }
+    }
+
+    if !logo_style_theme_css_path.is_empty() {
+        let write_res = fs::write(&logo_style_theme_css_path, &logo_style_theme_css);
+        if write_res.is_err() {
+            logger::log_to_core_file(
+                app_handle.to_owned(),
+                format!(
+                    "Failed to write Logo Style Theme CSS to {}.",
+                    logo_style_theme_css_path
+                )
+                .as_str(),
+                2,
+            );
+            let err = write_res.err().unwrap();
+            return format!("{{ \"error\": \"{}\"}}", err.to_string());
+        }
+
+        logger::log_to_core_file(
+            app_handle.to_owned(),
+            format!("Wrote Logo Style Theme CSS to {}.", logo_style_theme_css_path).as_str(),
+            0,
+        );
     }
 
     let should_change_shortcuts: bool =

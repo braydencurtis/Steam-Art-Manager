@@ -15,13 +15,13 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>
  */
-import { GridTypes, type ChangedPath, type LogoPinPositions, type SGDBGame, type SGDBImage } from "@types";
-import { restartApp } from "@utils";
+import { GridTypes, type ChangedPath, type LogoPinPositions, type LogoStyleOverride, type SGDBGame, type SGDBImage } from "@types";
+import { compileLogoStyleTheme, restartApp } from "@utils";
 import { createTippy } from "svelte-tippy";
 import { get } from "svelte/store";
 import { hideAll, type Instance, type Props } from "tippy.js";
 import "tippy.js/dist/tippy.css";
-import { Platforms, activeUserId, appLibraryCache, cacheSelectedGrids, canSave, currentPlatform, customGameNames, gridType, isOnline, loadingGames, manualSteamGames, needsSGDBAPIKey, needsSteamKey, nonSteamGames, originalAppLibraryCache, originalLogoPositions, originalSteamShortcuts, selectedGameAppId, selectedGameName, showErrorSnackbar, showInfoSnackbar, steamGames, steamKey, steamLogoPositions, steamShortcuts, steamUsers, unfilteredLibraryCache } from "../../stores/AppState";
+import { Platforms, activeUserId, appLibraryCache, cacheSelectedGrids, canSave, currentPlatform, customGameNames, gridType, isOnline, loadingGames, logoStyleDomSelectors, logoStyleShadowStyle, logoStyleThemeCssPath, manualSteamGames, needsSGDBAPIKey, needsSteamKey, nonSteamGames, originalAppLibraryCache, originalLogoPositions, originalSteamShortcuts, selectedGameAppId, selectedGameName, showErrorSnackbar, showInfoSnackbar, steamGames, steamKey, steamLogoPositions, steamShortcuts, steamUsers, unfilteredLibraryCache } from "../../stores/AppState";
 import { cleanConflicts, gameSearchModalCancel, gameSearchModalDefault, gameSearchModalSelect, gridModalInfo, showCleanConflictDialog, showGameSearchModal, showGridModal, showSettingsModal } from "../../stores/Modals";
 import { CacheController } from "./CacheController";
 import { SteamController } from "./SteamController";
@@ -115,7 +115,12 @@ export class AppController {
       }
     }
 
-    const changedPaths = await RustInterop.saveChanges(get(activeUserId).toString(), libraryCache, originalCache, shortcuts, shortcutIcons, originalShortcutIcons, logoPosStrings);
+    const themeCssPath = get(logoStyleThemeCssPath);
+    // TODO Logo Style Overrides aren't stored yet - always empty until that store exists.
+    const logoStyleOverrides: Record<string, LogoStyleOverride> = {};
+    const themeCss = themeCssPath !== "" ? compileLogoStyleTheme(logoStyleOverrides, get(logoStyleShadowStyle), get(logoStyleDomSelectors)) : "";
+
+    const changedPaths = await RustInterop.saveChanges(get(activeUserId).toString(), libraryCache, originalCache, shortcuts, shortcutIcons, originalShortcutIcons, logoPosStrings, themeCssPath, themeCss);
     
     if ((changedPaths as any).error !== undefined) {
       get(showErrorSnackbar)({ message: "Changes failed." });
