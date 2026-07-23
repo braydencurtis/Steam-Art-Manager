@@ -20,6 +20,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "check": "svelte-check --tsconfig ./tsconfig.json",
+    "test": "vitest run",
     "tauri": "tauri",
     "prepare": "husky install"
   },
@@ -44,8 +45,8 @@
     "@commitlint/cli": "^17.8.1",
     "@commitlint/config-conventional": "^17.8.1",
     "@sveltejs/vite-plugin-svelte": "^3.1.1",
-    "@tsconfig/svelte": "^5.0.6",
     "@tauri-apps/cli": "2.8.4",
+    "@tsconfig/svelte": "^5.0.6",
     "@types/markdown-it": "^12.2.3",
     "@types/node": "^18.19.43",
     "husky": "^8.0.3",
@@ -55,6 +56,7 @@
     "svelte-preprocess": "^5.1.4",
     "tslib": "^2.6.3",
     "typescript": "^5.5.4",
-    "vite": "^5.3.5"
+    "vite": "^5.3.5",
+    "vitest": "^1.6.1"
   }
 }
