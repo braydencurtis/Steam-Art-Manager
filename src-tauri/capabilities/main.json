@@ -20,7 +20,7 @@
         "/var/home/*/.config/dev.tormak.steam-art-manager",
         "$APPCONFIG/**",
         "/var/home/*/.config/dev.tormak.steam-art-manager/**",
-        "$Home/**",
+        "$HOME/**",
         "/var/home/*/**",
         "/home/*/.steam/**",
         "/home/*/.local/share/steam/**",

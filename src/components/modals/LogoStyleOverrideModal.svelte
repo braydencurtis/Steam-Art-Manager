@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { AppController } from "@controllers";
+  import { AppController, LogController } from "@controllers";
   import { TriangleExclamation } from "@icons";
   import { Button, DropDown, NumberInput, Toggle } from "@interactables";
   import { appLibraryCache, logoStyleDomSelectors, logoStyleOverrides, logoStyleShadowStyle, logoStyleThemeCssPath, manualSteamGames, nonSteamGames, selectedGameAppId, steamGames, steamLogoPositions, unfilteredLibraryCache } from "@stores/AppState";
@@ -23,7 +23,11 @@
     if (path === "") return;
 
     const css = compileLogoStyleTheme(overrides, get(logoStyleShadowStyle), get(logoStyleDomSelectors));
-    await writeTextFile(path, css);
+    try {
+      await writeTextFile(path, css);
+    } catch (e: any) {
+      LogController.error(`Failed to write Logo Style Theme CSS preview: ${e?.message ?? e}`);
+    }
   }
 
   /**
@@ -34,7 +38,9 @@
     const overrides = { ...get(logoStyleOverrides) };
 
     if (shadow || hasPosition) {
-      overrides[$selectedGameAppId] = hasPosition ? { shadow, position: { anchor, offsetX, offsetY } } : { shadow };
+      // NumberInput binds via a type="text" input, so offsetX/offsetY come back
+      // as strings at runtime despite their declared type - coerce explicitly.
+      overrides[$selectedGameAppId] = hasPosition ? { shadow, position: { anchor, offsetX: Number(offsetX), offsetY: Number(offsetY) } } : { shadow };
     } else {
       delete overrides[$selectedGameAppId];
     }
@@ -126,8 +132,10 @@
    * Apply the Logo Style Override changes.
    */
   function applyChanges(): void {
+    // NumberInput binds via a type="text" input, so offsetX/offsetY come back
+    // as strings at runtime despite their declared type - coerce explicitly.
     const override: LogoStyleOverride = hasPosition
-      ? { shadow, position: { anchor, offsetX, offsetY } }
+      ? { shadow, position: { anchor, offsetX: Number(offsetX), offsetY: Number(offsetY) } }
       : { shadow };
 
     AppController.setLogoStyleOverride($selectedGameAppId, override);
