@@ -2,20 +2,56 @@
   import { AppController } from "@controllers";
   import { TriangleExclamation } from "@icons";
   import { Button, DropDown, NumberInput, Toggle } from "@interactables";
-  import { appLibraryCache, logoStyleOverrides, logoStyleShadowStyle, manualSteamGames, nonSteamGames, selectedGameAppId, steamGames, steamLogoPositions, unfilteredLibraryCache } from "@stores/AppState";
+  import { appLibraryCache, logoStyleDomSelectors, logoStyleOverrides, logoStyleShadowStyle, logoStyleThemeCssPath, manualSteamGames, nonSteamGames, selectedGameAppId, steamGames, steamLogoPositions, unfilteredLibraryCache } from "@stores/AppState";
   import { showLogoStyleOverrideModal } from "@stores/Modals";
   import { convertFileSrc } from "@tauri-apps/api/core";
+  import { writeTextFile } from "@tauri-apps/plugin-fs";
   import type { AnchorPosition, LogoStyleOverride } from "@types";
-  import { IMAGE_FADE_OPTIONS } from "@utils";
+  import { compileLogoStyleTheme, debounce, IMAGE_FADE_OPTIONS } from "@utils";
+  import { get } from "svelte/store";
   import { onMount } from "svelte";
   import { fade } from "svelte/transition";
   import ModalBody from "./modal-utils/ModalBody.svelte";
+
+  /**
+   * Writes a live preview of the Theme CSS to disk, so open-modal edits show up in
+   * Big Picture Mode immediately instead of waiting for the app's global Save.
+   * @param overrides The override map to compile and write.
+   */
+  async function writeThemeCssPreview(overrides: Record<string, LogoStyleOverride>): Promise<void> {
+    const path = get(logoStyleThemeCssPath);
+    if (path === "") return;
+
+    const css = compileLogoStyleTheme(overrides, get(logoStyleShadowStyle), get(logoStyleDomSelectors));
+    await writeTextFile(path, css);
+  }
+
+  /**
+   * Builds the override map as it would look if the in-progress modal edit were applied,
+   * without actually staging it into the logoStyleOverrides store.
+   */
+  function liveOverrides(): Record<string, LogoStyleOverride> {
+    const overrides = { ...get(logoStyleOverrides) };
+
+    if (shadow || hasPosition) {
+      overrides[$selectedGameAppId] = hasPosition ? { shadow, position: { anchor, offsetX, offsetY } } : { shadow };
+    } else {
+      delete overrides[$selectedGameAppId];
+    }
+
+    return overrides;
+  }
+
+  const debouncedLiveWrite = debounce(() => writeThemeCssPreview(liveOverrides()), 150);
 
   /**
    * The function to run when the modal closes.
    */
   function onClose(): void {
     $showLogoStyleOverrideModal = false;
+    // Revert the live preview back to whatever's actually staged, in case the
+    // modal is closing without having applied the in-progress edit.
+    writeThemeCssPreview(get(logoStyleOverrides));
   }
 
   const anchors: AnchorPosition[] = [
@@ -83,6 +119,8 @@
   $: previewAlign = getPreviewAlign(anchor);
   $: previewTransform = hasPosition ? `translate(${offsetX}px, ${offsetY}px)` : "none";
   $: previewFilter = shadow ? $logoStyleShadowStyle : "none";
+
+  $: { shadow; hasPosition; anchor; offsetX; offsetY; debouncedLiveWrite(); }
 
   /**
    * Apply the Logo Style Override changes.
