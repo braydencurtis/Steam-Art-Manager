@@ -54,9 +54,12 @@ function buildFlexAlign({ vertical, horizontal }: AxisAnchor): { alignItems: str
 }
 
 function compileGameRules(appid: string, override: LogoStyleOverride, domSelectors: LogoStyleDomSelectors): string {
-  const outerSelector = `div[class*="${domSelectors.outerBoxSelector}"]:has(img[src*="/${appid}/"])`;
+  // Steam serves other art (hero/background images, capsules, etc.) under the
+  // same "/<appid>/" URL prefix as the logo, just with a different filename -
+  // matching on the appid alone would also catch that unrelated art.
+  const imgSelector = `img[src*="/${appid}/logo"]`;
+  const outerSelector = `div[class*="${domSelectors.outerBoxSelector}"]:has(${imgSelector})`;
   const innerSelector = `${outerSelector} > div[class*="${domSelectors.innerWrapperSelector}"]`;
-  const imgSelector = `img[src*="/${appid}/"]`;
 
   const blocks: string[] = [];
   const imgProps: string[] = [];

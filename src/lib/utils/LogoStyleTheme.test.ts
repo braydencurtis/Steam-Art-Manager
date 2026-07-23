@@ -34,10 +34,10 @@ describe("compileLogoStyleTheme", () => {
 
     const css = compileLogoStyleTheme(overrides, SHADOW_STYLE, SELECTORS);
 
-    expect(css).toContain("img[src*=\"/2909400/\"]");
+    expect(css).toContain("img[src*=\"/2909400/logo\"]");
     expect(css).toContain("filter: var(--logo-shadow) !important;");
     // No position was set, so no outer-box positioning rule should be emitted for this game.
-    expect(css).not.toContain("div[class*=\"OUTER_CLASS\"]:has(img[src*=\"/2909400/\"])");
+    expect(css).not.toContain("div[class*=\"OUTER_CLASS\"]:has(img[src*=\"/2909400/logo\"])");
   });
 
   it("emits a position-only rule for a game with a position but no shadow", () => {
@@ -47,12 +47,12 @@ describe("compileLogoStyleTheme", () => {
 
     const css = compileLogoStyleTheme(overrides, SHADOW_STYLE, SELECTORS);
 
-    expect(css).toContain("div[class*=\"OUTER_CLASS\"]:has(img[src*=\"/1091500/\"])");
+    expect(css).toContain("div[class*=\"OUTER_CLASS\"]:has(img[src*=\"/1091500/logo\"])");
     expect(css).toContain("div[class*=\"INNER_CLASS\"]");
     expect(css).toContain("top: 0% !important;");
     expect(css).toContain("left: 0% !important;");
     // No shadow was requested for this game.
-    const gameSection = css.split("img[src*=\"/1091500/\"]")[2] ?? "";
+    const gameSection = css.split("img[src*=\"/1091500/logo\"]")[2] ?? "";
     expect(gameSection).not.toContain("filter: var(--logo-shadow)");
   });
 
@@ -63,7 +63,7 @@ describe("compileLogoStyleTheme", () => {
 
     const css = compileLogoStyleTheme(overrides, SHADOW_STYLE, SELECTORS);
 
-    expect(css).toContain("div[class*=\"OUTER_CLASS\"]:has(img[src*=\"/1462040/\"])");
+    expect(css).toContain("div[class*=\"OUTER_CLASS\"]:has(img[src*=\"/1462040/logo\"])");
     expect(css).toContain("filter: var(--logo-shadow) !important;");
     expect(css).toContain("top: 50% !important;");
     expect(css).toContain("left: 0% !important;");
@@ -88,8 +88,8 @@ describe("compileLogoStyleTheme", () => {
 
     const css = compileLogoStyleTheme(overrides, SHADOW_STYLE, SELECTORS);
 
-    expect(css).toContain("img[src*=\"/570/\"]");
-    expect(css).toContain("img[src*=\"/1091500/\"]");
+    expect(css).toContain("img[src*=\"/570/logo\"]");
+    expect(css).toContain("img[src*=\"/1091500/logo\"]");
     expect(css).toContain("bottom: 0% !important;");
     expect(css).toContain("right: 0% !important;");
   });
@@ -104,5 +104,26 @@ describe("compileLogoStyleTheme", () => {
     expect(css).toContain("object-position: center bottom !important;");
     expect(css).toContain("align-items: flex-end !important;");
     expect(css).toContain("justify-content: center !important;");
+  });
+
+  it("does not match a non-logo image sharing the same appid prefix, like a hero background", () => {
+    // Steam serves other art (e.g. hero/background images) under the same
+    // "/<appid>/" URL prefix as the logo, just with a different filename -
+    // e.g. "/assets/1675830/hero.png" alongside "/assets/1675830/logo.png".
+    // Every selector must require "logo" in the filename, or a positioning/shadow
+    // rule meant for the logo will also apply to unrelated art for the same game.
+    const overrides: Record<string, LogoStyleOverride> = {
+      "1675830": { shadow: true, position: { anchor: "TopRight", offsetX: 0, offsetY: 0 } },
+    };
+
+    const css = compileLogoStyleTheme(overrides, SHADOW_STYLE, SELECTORS);
+
+    expect(css).not.toContain("img[src*=\"/1675830/\"]:not([src*=\"logo\"])");
+    // Every occurrence of the appid-scoped selector must be logo-specific.
+    const matches = css.match(/img\[src\*="\/1675830\/[^"]*"\]/g) ?? [];
+    expect(matches.length).toBeGreaterThan(0);
+    for (const match of matches) {
+      expect(match).toContain("logo");
+    }
   });
 });
