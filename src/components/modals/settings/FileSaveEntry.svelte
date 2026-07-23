@@ -1,53 +1,48 @@
 <script lang="ts">
   import { AppController } from "@controllers";
   import { Asterisk } from "@icons";
-  import { TextInput } from "@interactables";
+  import { SaveFileButton, TextInput } from "@interactables";
   import { open } from "@tauri-apps/plugin-shell";
-  import { debounce } from "@utils";
-  import { onMount } from "svelte";
+  import type { DialogFilter } from "@tauri-apps/plugin-dialog";
 
   export let label: string;
   export let description: string;
   export let required: boolean = false;
-  export let canBeEmpty = false;
   export let value: string;
   export let notes: string = "";
-  export let placeholder: string = "";
-  export let onChange: (value: string, isValid: boolean) => void = () => {};
-  
-  export let useValidator = false;
-  export let validator: (value: string) => Promise<boolean> = async (value: string) => true;
+  export let dialogTitle: string;
+  export let filters: DialogFilter[] = [];
+  export let onChange: (path: string) => void = () => {};
 
-  let isValid = false;
-  
   /**
-   * A wrapper for the onChange event.
+   * A wrapper for the text input's change event.
    */
-  async function changeWrapper(): Promise<void> {
-    isValid = await validator(value);
-    console.log(isValid);
-    onChange(value, isValid);
+  function changeWrapper(): void {
+    onChange(value);
   }
 
-  const debouncedWrapper = debounce(changeWrapper, 100);
+  /**
+   * A wrapper for the dialog's change event.
+   * @param path The new path.
+   */
+  function dialogChangeWrapper(path: string): void {
+    value = path;
+    onChange(path);
+  }
 
   /**
    * Handles click events to redirect to the browser.
    * @param e The click event.
    */
-  function clickListener(e: Event): void {
+  function clickListener(e: Event) {
     const origin = (e.target as Element).closest("a");
-  
+
     if (origin) {
       e.preventDefault();
       const href = origin.href;
       open(href);
     }
   }
-  
-  onMount(async () => {
-    isValid = await validator(value);
-  });
 </script>
 
 <div class="setting">
@@ -62,19 +57,8 @@
     </div>
   </div>
   <div class="inputs">
-    <TextInput placeholder={placeholder} on:input={debouncedWrapper} width="13.75rem" bind:value={value} />
-
-    {#if useValidator}
-      {#if isValid}
-        <div class="valid-value">Valid api key</div>
-      {:else}
-        {#if value === "" && canBeEmpty}
-          <div class="warn-value">No api key provided</div>
-        {:else}
-          <div class="invalid-value">Not a valid api key!</div>
-        {/if}
-      {/if}
-    {/if}
+    <TextInput placeholder={"~/something/something.css"} on:change={changeWrapper} width="11.75rem" bind:value={value} />
+    <SaveFileButton label="Select File" dialogTitle={dialogTitle} filters={filters} tooltipPosition={"right"} on:change={(e) => dialogChangeWrapper(e.detail.value)} />
   </div>
   <!-- svelte-ignore a11y-click-events-have-key-events -->
   <!-- svelte-ignore a11y-no-static-element-interactions -->
@@ -122,6 +106,13 @@
     font-size: 1rem;
   }
 
+  .inputs {
+    display: flex;
+    align-items: center;
+
+    gap: 0.5rem;
+  }
+
   .part {
     width: 100%;
   }
@@ -134,28 +125,5 @@
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
-  }
-
-  
-  .inputs {
-    display: flex;
-    align-items: center;
-
-    gap: 0.5rem;
-  }
-
-  .valid-value {
-    font-size: 0.875rem;
-    color: var(--success);
-  }
-
-  .warn-value {
-    font-size: 0.875rem;
-    color: rgb(231, 198, 12);
-  }
-
-  .invalid-value {
-    font-size: 0.875rem;
-    color: var(--warning);
   }
 </style>

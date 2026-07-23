@@ -4,7 +4,8 @@
   import { Folder } from "@icons";
   import { Button, IconButton } from "@interactables";
   import { APP_TYPES, GRID_IMAGE_SIZES } from "@models";
-  import { activeUserId, appTypes, cacheSelectedGrids, debugMode, gridImageSize, loadingGames, needsSGDBAPIKey, needsSteamKey, showInfoSnackbar, steamGridDBKey, steamInstallPath, steamKey, steamUsers } from "@stores/AppState";
+  import { activeUserId, appTypes, cacheSelectedGrids, debugMode, gridImageSize, loadingGames, logoStyleDomSelectors, logoStyleShadowStyle, logoStyleThemeCssPath, needsSGDBAPIKey, needsSteamKey, showInfoSnackbar, steamGridDBKey, steamInstallPath, steamKey, steamUsers } from "@stores/AppState";
+  import type { LogoStyleDomSelectors } from "@types";
   import { showSettingsModal } from "@stores/Modals";
   import { appLogDir } from "@tauri-apps/api/path";
   import * as shell from "@tauri-apps/plugin-shell";
@@ -15,6 +16,7 @@
   import ChecklistArrayEntry from "./ChecklistArrayEntry.svelte";
   import DropdownEntry from "./DropdownEntry.svelte";
   import FilePathEntry from "./FilePathEntry.svelte";
+  import FileSaveEntry from "./FileSaveEntry.svelte";
   import TextFieldEntry from "./TextFieldEntry.svelte";
   import ToggleFieldEntry from "./ToggleFieldEntry.svelte";
   
@@ -65,6 +67,10 @@
   let appTypesSetting = [...$appTypes];
   let gridImageSizeSetting = $gridImageSize;
 
+  let themeCssOutputPath = $logoStyleThemeCssPath;
+  let shadowStyleSetting = $logoStyleShadowStyle;
+  let domSelectorsSetting: LogoStyleDomSelectors = { ...$logoStyleDomSelectors };
+
   /**
    * Saves the changed settings.
    */
@@ -98,6 +104,12 @@
 
     if (selectedUserId !== $activeUserId.toString()) await AppController.changeSteamUser(selectedUserId);
 
+    if (themeCssOutputPath !== $logoStyleThemeCssPath) $logoStyleThemeCssPath = themeCssOutputPath;
+
+    if (shadowStyleSetting !== $logoStyleShadowStyle) $logoStyleShadowStyle = shadowStyleSetting;
+
+    if (JSON.stringify(domSelectorsSetting) !== JSON.stringify($logoStyleDomSelectors)) $logoStyleDomSelectors = domSelectorsSetting;
+
     LogController.log("Saved settings.");
     $showInfoSnackbar({ message: "Settings saved!" });
     canSave = false;
@@ -119,7 +131,11 @@
     appTypesSetting = [...$appTypes];
     cacheSelectedGridsSetting = $cacheSelectedGrids
     gridImageSizeSetting = $gridImageSize
-    
+
+    themeCssOutputPath = $logoStyleThemeCssPath;
+    shadowStyleSetting = $logoStyleShadowStyle;
+    domSelectorsSetting = { ...$logoStyleDomSelectors };
+
     LogController.log("Reverted settings.");
     
     canSave = false;
@@ -184,6 +200,42 @@
   }
 
   /**
+   * Function to run on Theme CSS output path change.
+   * @param path The updated path.
+   */
+  function onThemeCssOutputPathChange(path: string): void {
+    themeCssOutputPath = path;
+    canSave = true;
+  }
+
+  /**
+   * Function to run on logo shadow style change.
+   * @param value The updated value.
+   */
+  function onShadowStyleChange(value: string): void {
+    shadowStyleSetting = value;
+    canSave = true;
+  }
+
+  /**
+   * Function to run on DOM outer box selector change.
+   * @param value The updated value.
+   */
+  function onDomOuterSelectorChange(value: string): void {
+    domSelectorsSetting = { ...domSelectorsSetting, outerBoxSelector: value };
+    canSave = true;
+  }
+
+  /**
+   * Function to run on DOM inner wrapper selector change.
+   * @param value The updated value.
+   */
+  function onDomInnerSelectorChange(value: string): void {
+    domSelectorsSetting = { ...domSelectorsSetting, innerWrapperSelector: value };
+    canSave = true;
+  }
+
+  /**
    * Opens the app's log directory.
    */
   async function openLogDirectory() {
@@ -244,6 +296,7 @@
           label="SteamGrid Api Key"
           description={"Needed to load art from SteamGridDB.com. To create one, go to <a href=\"https://www.steamgriddb.com\">Steamgrid</a>, sign in and go to preferences, then API."}
           value={steamGridKey}
+          placeholder={"Your API key"}
           onChange={onGridKeyChange}
           required
         />
@@ -253,6 +306,7 @@
           notes={"Recommended for large libraries. It does <b>NOT</b> matter what domain you put in, It just needs to be a valid url. When in doubt do \"http://YOUR_STEAM_USERNAME.com\"."}
           value={steamAPIKey}
           canBeEmpty
+          placeholder={"Your API key"}
           onChange={onSteamKeyChange}
         />
         <ChecklistArrayEntry
@@ -289,6 +343,38 @@
           description={"Enables the inspect element window and automatically opens it on launch."}
           value={debugModeSetting}
           onChange={onDebugModeChange}
+        />
+        <FileSaveEntry
+          label="Logo Style Theme CSS Path"
+          description={"Where SARM writes the generated Theme CSS file for your Logo Style Overrides. Add a single <code>@import</code> line pointing at this file to your CSS-Loader theme."}
+          value={themeCssOutputPath}
+          dialogTitle="Select Theme CSS output file"
+          filters={[{ name: "CSS", extensions: ["css"] }]}
+          onChange={onThemeCssOutputPathChange}
+        />
+        <TextFieldEntry
+          label="Logo Shadow Style"
+          description={"The CSS <code>filter</code> value applied to every game with its Logo Style Override shadow toggle on."}
+          value={shadowStyleSetting}
+          canBeEmpty
+          placeholder={"drop-shadow(...)"}
+          onChange={onShadowStyleChange}
+        />
+        <TextFieldEntry
+          label="Logo Outer Box Selector"
+          description={"The CSS class-name fragment of Steam's logo outer bounding box element. Update this if a Steam client update breaks your Logo Style Overrides."}
+          value={domSelectorsSetting.outerBoxSelector}
+          canBeEmpty
+          placeholder={"e.g. _2Eh7Soh97QONu_grMi2m66"}
+          onChange={onDomOuterSelectorChange}
+        />
+        <TextFieldEntry
+          label="Logo Inner Wrapper Selector"
+          description={"The CSS class-name fragment of Steam's logo inner image wrapper element. Update this if a Steam client update breaks your Logo Style Overrides."}
+          value={domSelectorsSetting.innerWrapperSelector}
+          canBeEmpty
+          placeholder={"e.g. _2DVdg_N1qLNDdnxJqN-RBX"}
+          onChange={onDomInnerSelectorChange}
         />
       </div>
     </div>

@@ -1,3 +1,4 @@
+import type { LogoShadowStyle, LogoStyleDomSelectors } from "./LogoStyle";
 import type { CleanGridsPreset, GameStruct, GridTypesOptionalMap, MainWindowPanels, ManageManualGamesMethod } from "./SARM";
 import type { SGDBImage } from "./SGDB";
 
@@ -13,7 +14,11 @@ export type Settings = {
 
   cacheSelectedGrids: boolean,
   userSelectedGrids: Record<string, GridTypesOptionalMap<SGDBImage[]>>,
-  
+
+  logoStyleThemeCssPath: string,
+  logoStyleShadowStyle: LogoShadowStyle,
+  logoStyleDomSelectors: LogoStyleDomSelectors,
+
   theme: number,
   showHiddenGames: boolean,
 

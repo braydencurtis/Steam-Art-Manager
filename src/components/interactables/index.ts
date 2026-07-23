@@ -7,6 +7,7 @@ export { default as IconToggle } from "./IconToggle.svelte";
 export { default as Menu } from "./Menu.svelte";
 export { default as NumberInput } from "./NumberInput.svelte";
 export { default as RangeInput } from "./RangeInput.svelte";
+export { default as SaveFileButton } from "./SaveFileButton.svelte";
 export { default as SearchBar } from "./SearchBar.svelte";
 export { default as Slider } from "./Slider.svelte";
 export { default as TextInput } from "./TextInput.svelte";

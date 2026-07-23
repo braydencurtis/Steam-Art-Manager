@@ -16,7 +16,7 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>
  */
 import { DEFAULT_SETTINGS } from "@models";
-import { activeUserId, appTypes, cacheSelectedGrids, customGameNames, dbFilters, debugMode, gamesSize, gridImageSize, gridsSize, gridType, hiddenGameIds, loadingSettings, manualSteamGames, needsSGDBAPIKey, needsSteamKey, optionsSize, renderGamesInList, selectedCleanGridsPreset, selectedManualGamesAddMethod, showCachedGrids, showHidden, showInfoSnackbar, steamGridDBKey, steamInstallPath, steamKey, steamUsers, theme, userSelectedGrids } from "@stores/AppState";
+import { activeUserId, appTypes, cacheSelectedGrids, customGameNames, dbFilters, debugMode, gamesSize, gridImageSize, gridsSize, gridType, hiddenGameIds, loadingSettings, logoStyleDomSelectors, logoStyleShadowStyle, logoStyleThemeCssPath, manualSteamGames, needsSGDBAPIKey, needsSteamKey, optionsSize, renderGamesInList, selectedCleanGridsPreset, selectedManualGamesAddMethod, showCachedGrids, showHidden, showInfoSnackbar, steamGridDBKey, steamInstallPath, steamKey, steamUsers, theme, userSelectedGrids } from "@stores/AppState";
 import { path } from "@tauri-apps/api";
 import * as fs from "@tauri-apps/plugin-fs";
 import { exit } from "@tauri-apps/plugin-process";
@@ -355,6 +355,17 @@ export class SettingsController {
       SettingsController.oldValues["userSelectedGrids"] = userSelectedGridsSetting;
       userSelectedGrids.set(userSelectedGridsSetting);
 
+      const logoStyleThemeCssPathSetting = SettingsController.settings.logoStyleThemeCssPath;
+      SettingsController.oldValues["logoStyleThemeCssPath"] = logoStyleThemeCssPathSetting;
+      logoStyleThemeCssPath.set(logoStyleThemeCssPathSetting);
+
+      const logoStyleShadowStyleSetting = SettingsController.settings.logoStyleShadowStyle;
+      SettingsController.oldValues["logoStyleShadowStyle"] = logoStyleShadowStyleSetting;
+      logoStyleShadowStyle.set(logoStyleShadowStyleSetting);
+
+      const logoStyleDomSelectorsSetting = SettingsController.settings.logoStyleDomSelectors;
+      SettingsController.oldValues["logoStyleDomSelectors"] = structuredClone(logoStyleDomSelectorsSetting);
+      logoStyleDomSelectors.set(logoStyleDomSelectorsSetting);
 
       const gameViewTypeSetting = SettingsController.settings.windowSettings.main.gameViewType;
       SettingsController.oldValues["windowSettings.main.gameViewType"] = gameViewTypeSetting;
@@ -440,6 +451,10 @@ export class SettingsController {
       showHidden.subscribe(SettingsController.setOnChange("showHiddenGames")),
       cacheSelectedGrids.subscribe(SettingsController.setOnChange("cacheSelectedGrids")),
       userSelectedGrids.subscribe(SettingsController.setOnChange("userSelectedGrids")),
+
+      logoStyleThemeCssPath.subscribe(SettingsController.setOnChange("logoStyleThemeCssPath")),
+      logoStyleShadowStyle.subscribe(SettingsController.setOnChange("logoStyleShadowStyle")),
+      logoStyleDomSelectors.subscribe(SettingsController.setOnChange("logoStyleDomSelectors")),
   
       dbFilters.subscribe(SettingsController.setOnChange("windowSettings.main.filters")),
   

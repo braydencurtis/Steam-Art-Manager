@@ -1,4 +1,4 @@
-import type { Settings } from "@types";
+import { DEFAULT_LOGO_SHADOW_STYLE, DEFAULT_LOGO_STYLE_DOM_SELECTORS, type Settings } from "@types";
 
 export const APP_TYPES = [
   "Game",
@@ -167,7 +167,11 @@ export const DEFAULT_SETTINGS: Settings = {
 
   cacheSelectedGrids: false,
   userSelectedGrids: {},
-  
+
+  logoStyleThemeCssPath: "",
+  logoStyleShadowStyle: DEFAULT_LOGO_SHADOW_STYLE,
+  logoStyleDomSelectors: DEFAULT_LOGO_STYLE_DOM_SELECTORS,
+
   theme: 0,
   showHiddenGames: false,
 

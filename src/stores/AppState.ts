@@ -1,5 +1,5 @@
 import { DEFAULT_FILTERS } from "@models";
-import { GridTypes, type GameStruct, type GridTypesMap, type GridTypesOptionalMap, type LibraryCacheEntry, type SGDBGame, type SGDBImage, type SteamLogoConfig, type SteamShortcut, type SteamUser } from "@types";
+import { DEFAULT_LOGO_SHADOW_STYLE, DEFAULT_LOGO_STYLE_DOM_SELECTORS, GridTypes, type GameStruct, type GridTypesMap, type GridTypesOptionalMap, type LibraryCacheEntry, type LogoShadowStyle, type LogoStyleDomSelectors, type SGDBGame, type SGDBImage, type SteamLogoConfig, type SteamShortcut, type SteamUser } from "@types";
 import { derived, writable, type Writable } from "svelte/store";
 
 export type DBFilter = {
@@ -83,6 +83,10 @@ export const customGameNames = writable<Record<string, string>>({});
 
 export const cacheSelectedGrids = writable(false);
 export const showCachedGrids = writable(false);
+
+export const logoStyleThemeCssPath = writable("");
+export const logoStyleShadowStyle: Writable<LogoShadowStyle> = writable(DEFAULT_LOGO_SHADOW_STYLE);
+export const logoStyleDomSelectors: Writable<LogoStyleDomSelectors> = writable(DEFAULT_LOGO_STYLE_DOM_SELECTORS);
 
 /**
  * The default library art provided by Steam.
