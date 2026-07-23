@@ -1,7 +1,8 @@
 <script lang="ts">
   import { AppController } from "@controllers";
+  import { TriangleExclamation } from "@icons";
   import { Button, DropDown, NumberInput, Toggle } from "@interactables";
-  import { appLibraryCache, logoStyleOverrides, logoStyleShadowStyle, manualSteamGames, nonSteamGames, selectedGameAppId, steamGames, unfilteredLibraryCache } from "@stores/AppState";
+  import { appLibraryCache, logoStyleOverrides, logoStyleShadowStyle, manualSteamGames, nonSteamGames, selectedGameAppId, steamGames, steamLogoPositions, unfilteredLibraryCache } from "@stores/AppState";
   import { showLogoStyleOverrideModal } from "@stores/Modals";
   import { convertFileSrc } from "@tauri-apps/api/core";
   import type { AnchorPosition, LogoStyleOverride } from "@types";
@@ -54,6 +55,9 @@
   $: canSave = shadow !== originalShadow
     || hasPosition !== originalHasPosition
     || (hasPosition && (anchor !== originalAnchor || offsetX !== originalOffsetX || offsetY !== originalOffsetY));
+
+  $: hasNativeLogoPosition = $steamLogoPositions[$selectedGameAppId]?.logoPosition.pinnedPosition !== undefined
+    && $steamLogoPositions[$selectedGameAppId]?.logoPosition.pinnedPosition !== "REMOVE";
 
   const widths = {
     "Hero": 59.75,
@@ -137,6 +141,12 @@
         <img in:fade={IMAGE_FADE_OPTIONS} src="{logoPath}" alt="Logo image for {game?.name}" style="max-height: {heights.Logo}%; max-width: {widths.Logo}%; width: auto; height: auto; transform: {previewTransform}; filter: {previewFilter};" />
       </div>
     </div>
+    {#if hasNativeLogoPosition}
+      <div class="warning">
+        <TriangleExclamation style="height: 0.875rem; width: 0.875rem; fill: var(--warning); flex-shrink: 0;" />
+        <span>This game also has a native Steam logo position set. This Logo Style Override will take visual priority over it.</span>
+      </div>
+    {/if}
     <div class="interactables">
       <Toggle label="Shadow" bind:value={shadow} />
       <Toggle label="Custom Position" bind:value={hasPosition} />
@@ -199,6 +209,22 @@
     border-radius: 0.125rem;
     background-color: #a3a3a3;
     background-image: linear-gradient(140deg, #adadad 0%, #727272 50%, #535353 75%);
+  }
+
+  .warning {
+    width: calc(100% - 1.25rem);
+    margin: 0rem 0.625rem 0.625rem;
+    padding: 0.5rem;
+
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+
+    font-size: 0.875rem;
+    color: var(--warning);
+
+    background-color: var(--background-dark);
+    border-radius: 0.25rem;
   }
 
   .interactables {
