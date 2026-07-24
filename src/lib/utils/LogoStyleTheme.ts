@@ -65,6 +65,10 @@ function compileGameRules(appid: string, override: LogoStyleOverride, domSelecto
     imgProps.push(`  filter: ${buildShadowFilter(override.shadow)} !important;`);
   }
 
+  if (override.size) {
+    imgProps.push(`  transform: scale(${override.size.scale / 100}) !important;`);
+  }
+
   if (imgProps.length > 0) {
     blocks.push([`${imgSelector} {`, ...imgProps, "}"].join("\n"));
   }
@@ -101,7 +105,7 @@ export function compileLogoStyleTheme(
   domSelectors: LogoStyleDomSelectors
 ): string {
   const gameBlocks = Object.entries(overrides)
-    .filter(([, override]) => override.shadow || override.position || override.background)
+    .filter(([, override]) => override.shadow || override.position || override.background || override.size)
     .map(([appid, override]) => compileGameRules(appid, override, domSelectors))
     .filter((block) => block.length > 0);
 

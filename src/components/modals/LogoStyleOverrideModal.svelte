@@ -34,11 +34,12 @@
   function liveOverrides(): Record<string, LogoStyleOverride> {
     const overrides = { ...get(logoStyleOverrides) };
 
-    if (hasShadow || hasPosition || hasBackground) {
+    if (hasShadow || hasPosition || hasBackground || hasSize) {
       overrides[$selectedGameAppId] = {
         ...(hasShadow ? { shadow: buildShadow() } : {}),
         ...(hasPosition ? { position: { x, y } } : {}),
         ...(hasBackground ? { background: { x: backgroundX } } : {}),
+        ...(hasSize ? { size: { scale } } : {}),
       };
     } else {
       delete overrides[$selectedGameAppId];
@@ -102,6 +103,8 @@
   const originalY = existingOverride?.position?.y ?? 50;
   const originalHasBackground = !!existingOverride?.background;
   const originalBackgroundX = existingOverride?.background?.x ?? 50;
+  const originalHasSize = !!existingOverride?.size;
+  const originalScale = existingOverride?.size?.scale ?? 100;
 
   let hasShadow = originalHasShadow;
   let shadowLayer1Radius = originalShadow?.layer1.radius ?? $logoStyleShadowStyle.layer1.radius;
@@ -113,6 +116,8 @@
   let y = originalY;
   let hasBackground = originalHasBackground;
   let backgroundX = originalBackgroundX;
+  let hasSize = originalHasSize;
+  let scale = originalScale;
 
   /**
    * Builds a shadow style from the current per-game shadow layer controls.
@@ -154,12 +159,14 @@
     || hasPosition !== originalHasPosition
     || (hasPosition && (x !== originalX || y !== originalY))
     || hasBackground !== originalHasBackground
-    || (hasBackground && backgroundX !== originalBackgroundX);
+    || (hasBackground && backgroundX !== originalBackgroundX)
+    || hasSize !== originalHasSize
+    || (hasSize && scale !== originalScale);
 
   $: hasNativeLogoPosition = $steamLogoPositions[$selectedGameAppId]?.logoPosition.pinnedPosition !== undefined
     && $steamLogoPositions[$selectedGameAppId]?.logoPosition.pinnedPosition !== "REMOVE";
 
-  $: { hasShadow; shadowLayer1Radius; shadowLayer1Opacity; shadowLayer2Radius; shadowLayer2Opacity; hasPosition; x; y; hasBackground; backgroundX; debouncedLiveWrite(); }
+  $: { hasShadow; shadowLayer1Radius; shadowLayer1Opacity; shadowLayer2Radius; shadowLayer2Opacity; hasPosition; x; y; hasBackground; backgroundX; hasSize; scale; debouncedLiveWrite(); }
 
   /**
    * Apply the Logo Style Override changes.
@@ -169,6 +176,7 @@
       ...(hasShadow ? { shadow: buildShadow() } : {}),
       ...(hasPosition ? { position: { x, y } } : {}),
       ...(hasBackground ? { background: { x: backgroundX } } : {}),
+      ...(hasSize ? { size: { scale } } : {}),
     };
 
     AppController.setLogoStyleOverride($selectedGameAppId, override);
@@ -200,6 +208,14 @@
    */
   function onBackgroundXChange(value: number): void {
     backgroundX = value;
+  }
+
+  /**
+   * Handles a change from the size PercentSlider.
+   * @param value The new scale percentage.
+   */
+  function onScaleChange(value: number): void {
+    scale = value;
   }
 
   /**
@@ -247,6 +263,7 @@
       <Toggle label="Shadow" bind:value={hasShadow} on:change={onShadowToggleChange} />
       <Toggle label="Custom Position" bind:value={hasPosition} />
       <Toggle label="Background Position" bind:value={hasBackground} />
+      <Toggle label="Custom Size" bind:value={hasSize} />
     </div>
     {#if hasShadow}
       <div class="shadow-section">
@@ -276,6 +293,11 @@
     {#if hasBackground}
       <div class="background-section">
         <PercentSlider label="Background X" value={backgroundX} onChange={onBackgroundXChange} />
+      </div>
+    {/if}
+    {#if hasSize}
+      <div class="size-section">
+        <PercentSlider label="Size" min={50} max={200} value={scale} onChange={onScaleChange} />
       </div>
     {/if}
     <div class="buttons">
@@ -364,6 +386,11 @@
   }
 
   .background-section {
+    width: calc(100% - 1.25rem);
+    padding: 0rem 0.625rem;
+  }
+
+  .size-section {
     width: calc(100% - 1.25rem);
     padding: 0rem 0.625rem;
   }

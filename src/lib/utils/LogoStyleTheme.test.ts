@@ -90,6 +90,53 @@ describe("compileLogoStyleTheme", () => {
     expect(gameSection).not.toContain("filter:");
   });
 
+  it("emits a size-only rule for a game with a size override, scaling the image via transform", () => {
+    const overrides: Record<string, LogoStyleOverride> = {
+      "1091500": { size: { scale: 150 } },
+    };
+
+    const css = compileLogoStyleTheme(overrides, SELECTORS);
+
+    expect(css).toContain("img[src*=\"/1091500/logo\"]");
+    expect(css).toContain("transform: scale(1.5) !important;");
+    // No outer-box positioning rule should be emitted - size alone doesn't reposition.
+    expect(css).not.toContain("div[class*=\"OUTER_CLASS\"]:has(img[src*=\"/1091500/logo\"])");
+  });
+
+  it("emits object-position and transform: scale() together in the same image rule when both position and size are set", () => {
+    // object-position (from position) crops/places the image *within* its box;
+    // transform: scale() (from size) enlarges/shrinks the rendered element
+    // around its own box's center, independent of object-position - the two
+    // are different CSS mechanisms and don't collide with each other.
+    const overrides: Record<string, LogoStyleOverride> = {
+      "1091500": { position: { x: 0, y: 100 }, size: { scale: 150 } },
+    };
+
+    const css = compileLogoStyleTheme(overrides, SELECTORS);
+    const imgRule = css.split(`img[src*="/1091500/logo"] {`)[1] ?? "";
+
+    expect(imgRule).toContain("object-position: 0% 100% !important;");
+    expect(imgRule).toContain("transform: scale(1.5) !important;");
+  });
+
+  it("compiles size 100 (unchanged) to scale(1), and 50 (half) to scale(0.5)", () => {
+    const cases = [
+      { scale: 100, expectedTransform: "scale(1)" },
+      { scale: 50, expectedTransform: "scale(0.5)" },
+      { scale: 200, expectedTransform: "scale(2)" },
+    ];
+
+    for (const { scale, expectedTransform } of cases) {
+      const overrides: Record<string, LogoStyleOverride> = {
+        "1": { size: { scale } },
+      };
+
+      const css = compileLogoStyleTheme(overrides, SELECTORS);
+
+      expect(css).toContain(`transform: ${expectedTransform} !important;`);
+    }
+  });
+
   it("emits both position and shadow rules for a game with both set", () => {
     const overrides: Record<string, LogoStyleOverride> = {
       "1462040": { shadow: SHADOW_STYLE, position: { x: 0, y: 50 } },

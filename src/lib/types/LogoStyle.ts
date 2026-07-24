@@ -18,15 +18,25 @@ export type LogoBackgroundOverride = {
 };
 
 /**
- * A per-game Logo Style Override. Shadow, position, and background are independent -
- * any combination, or (when absent from the overrides map) none, can be set for a game.
- * A present `shadow` is a full copy of the shadow style at the moment it was turned
- * on for this game, tunable independently from the global default afterward.
+ * A logo's size, as a percentage scale relative to its native rendered size -
+ * 100 is unchanged, below shrinks, above enlarges.
+ */
+export type LogoSizeOverride = {
+  scale: number,
+};
+
+/**
+ * A per-game Logo Style Override. Shadow, position, background, and size are
+ * independent - any combination, or (when absent from the overrides map) none,
+ * can be set for a game. A present `shadow` is a full copy of the shadow style
+ * at the moment it was turned on for this game, tunable independently from the
+ * global default afterward.
  */
 export type LogoStyleOverride = {
   shadow?: LogoShadowStyle,
   position?: LogoPositionOverride,
   background?: LogoBackgroundOverride,
+  size?: LogoSizeOverride,
 };
 
 /**
