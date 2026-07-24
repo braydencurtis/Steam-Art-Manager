@@ -80,7 +80,17 @@ function compileGameRules(appid: string, override: LogoStyleOverride, domSelecto
   }
 
   if (override.size) {
-    imgProps.push(`  transform: scale(${override.size.scale / 100}) !important;`);
+    // transform: scale() shrinks/grows from transform-origin, which defaults to
+    // the element's center - combined with a corner-anchored position, that
+    // leaves a gap between the anchor and the now-smaller logo, and no amount
+    // of repositioning can close it since the origin never moves with it.
+    // Anchoring the origin to the same point as the position (or center, if no
+    // position is set) makes the logo scale from - and stay flush with -
+    // wherever it's actually anchored.
+    const originX = override.position?.x ?? 50;
+    const originY = override.position?.y ?? 50;
+
+    imgProps.push(`  transform-origin: ${originX}% ${originY}% !important;`, `  transform: scale(${override.size.scale / 100}) !important;`);
   }
 
   if (imgProps.length > 0) {

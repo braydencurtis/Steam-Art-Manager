@@ -123,9 +123,10 @@ describe("compileLogoStyleTheme", () => {
 
   it("emits object-position and transform: scale() together in the same image rule when both position and size are set", () => {
     // object-position (from position) crops/places the image *within* its box;
-    // transform: scale() (from size) enlarges/shrinks the rendered element
-    // around its own box's center, independent of object-position - the two
-    // are different CSS mechanisms and don't collide with each other.
+    // transform: scale() (from size) enlarges/shrinks the rendered element.
+    // transform-origin is anchored to the same point as the position so the
+    // logo scales from - and stays flush with - that anchor, rather than the
+    // default center origin leaving a gap between the anchor and the logo.
     const overrides: Record<string, LogoStyleOverride> = {
       "1091500": { position: { x: 0, y: 100 }, size: { scale: 150 } },
     };
@@ -134,7 +135,18 @@ describe("compileLogoStyleTheme", () => {
     const imgRule = css.split(`img[src*="/1091500/logo"] {`)[1] ?? "";
 
     expect(imgRule).toContain("object-position: 0% 100% !important;");
+    expect(imgRule).toContain("transform-origin: 0% 100% !important;");
     expect(imgRule).toContain("transform: scale(1.5) !important;");
+  });
+
+  it("defaults transform-origin to center when size is set with no position override", () => {
+    const overrides: Record<string, LogoStyleOverride> = {
+      "1091500": { size: { scale: 50 } },
+    };
+
+    const css = compileLogoStyleTheme(overrides, SELECTORS);
+
+    expect(css).toContain("transform-origin: 50% 50% !important;");
   });
 
   it("compiles size 100 (unchanged) to scale(1), and 50 (half) to scale(0.5)", () => {
