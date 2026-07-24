@@ -6,6 +6,7 @@ export { default as IconButton } from "./IconButton.svelte";
 export { default as IconToggle } from "./IconToggle.svelte";
 export { default as Menu } from "./Menu.svelte";
 export { default as NumberInput } from "./NumberInput.svelte";
+export { default as PercentSlider } from "./PercentSlider.svelte";
 export { default as RangeInput } from "./RangeInput.svelte";
 export { default as SaveFileButton } from "./SaveFileButton.svelte";
 export { default as SearchBar } from "./SearchBar.svelte";

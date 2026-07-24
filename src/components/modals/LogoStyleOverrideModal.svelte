@@ -1,7 +1,7 @@
 <script lang="ts">
   import { AppController, LogController } from "@controllers";
   import { TriangleExclamation } from "@icons";
-  import { Button, DropDown, NumberInput, Toggle } from "@interactables";
+  import { Button, PercentSlider, Toggle } from "@interactables";
   import { logoStyleDomSelectors, logoStyleOverrides, logoStyleShadowStyle, logoStyleThemeCssPath, manualSteamGames, nonSteamGames, selectedGameAppId, steamGames, steamLogoPositions } from "@stores/AppState";
   import { showLogoStyleOverrideModal } from "@stores/Modals";
   import { writeTextFile } from "@tauri-apps/plugin-fs";
@@ -35,9 +35,7 @@
     const overrides = { ...get(logoStyleOverrides) };
 
     if (shadow || hasPosition) {
-      // NumberInput binds via a type="text" input, so x/y come back
-      // as strings at runtime despite their declared type - coerce explicitly.
-      overrides[$selectedGameAppId] = hasPosition ? { shadow, position: { x: Number(x), y: Number(y) } } : { shadow };
+      overrides[$selectedGameAppId] = hasPosition ? { shadow, position: { x, y } } : { shadow };
     } else {
       delete overrides[$selectedGameAppId];
     }
@@ -59,30 +57,25 @@
 
   // Anchor presets are a UI-only convenience - picking one just sets x/y below,
   // nothing about "which anchor was picked" is stored or persisted.
-  // TODO Replaced by preset buttons + paired slider/number controls in issue #11.
-  const anchorPresets: { label: string, data: string, x: number, y: number }[] = [
-    { label: "Top Left", data: "TopLeft", x: 0, y: 0 },
-    { label: "Top Center", data: "TopCenter", x: 50, y: 0 },
-    { label: "Top Right", data: "TopRight", x: 100, y: 0 },
-    { label: "Center Left", data: "CenterLeft", x: 0, y: 50 },
-    { label: "Center Center", data: "CenterCenter", x: 50, y: 50 },
-    { label: "Center Right", data: "CenterRight", x: 100, y: 50 },
-    { label: "Bottom Left", data: "BottomLeft", x: 0, y: 100 },
-    { label: "Bottom Center", data: "BottomCenter", x: 50, y: 100 },
-    { label: "Bottom Right", data: "BottomRight", x: 100, y: 100 },
+  const anchorPresets: { label: string, x: number, y: number }[] = [
+    { label: "Top Left", x: 0, y: 0 },
+    { label: "Top Center", x: 50, y: 0 },
+    { label: "Top Right", x: 100, y: 0 },
+    { label: "Center Left", x: 0, y: 50 },
+    { label: "Center Center", x: 50, y: 50 },
+    { label: "Center Right", x: 100, y: 50 },
+    { label: "Bottom Left", x: 0, y: 100 },
+    { label: "Bottom Center", x: 50, y: 100 },
+    { label: "Bottom Right", x: 100, y: 100 },
   ];
-  const anchorOptions = anchorPresets.map(({ label, data }) => ({ label, data }));
 
   /**
    * Applies the chosen anchor preset's x/y values.
-   * @param presetKey The selected preset's key.
+   * @param preset The selected preset.
    */
-  function applyAnchorPreset(presetKey: string): void {
-    const preset = anchorPresets.find((p) => p.data === presetKey);
-    if (preset) {
-      x = preset.x;
-      y = preset.y;
-    }
+  function applyAnchorPreset(preset: { x: number, y: number }): void {
+    x = preset.x;
+    y = preset.y;
   }
 
   $: games = [ ...$steamGames, ...$manualSteamGames, ...$nonSteamGames ];
@@ -105,7 +98,7 @@
   $: canClear = !!existingOverride;
   $: canSave = shadow !== originalShadow
     || hasPosition !== originalHasPosition
-    || (hasPosition && (Number(x) !== originalX || Number(y) !== originalY));
+    || (hasPosition && (x !== originalX || y !== originalY));
 
   $: hasNativeLogoPosition = $steamLogoPositions[$selectedGameAppId]?.logoPosition.pinnedPosition !== undefined
     && $steamLogoPositions[$selectedGameAppId]?.logoPosition.pinnedPosition !== "REMOVE";
@@ -116,10 +109,8 @@
    * Apply the Logo Style Override changes.
    */
   function applyChanges(): void {
-    // NumberInput binds via a type="text" input, so x/y come back
-    // as strings at runtime despite their declared type - coerce explicitly.
     const override: LogoStyleOverride = hasPosition
-      ? { shadow, position: { x: Number(x), y: Number(y) } }
+      ? { shadow, position: { x, y } }
       : { shadow };
 
     AppController.setLogoStyleOverride($selectedGameAppId, override);
@@ -132,6 +123,17 @@
   function clearOverride(): void {
     AppController.clearLogoStyleOverride($selectedGameAppId);
     onClose();
+  }
+
+  /**
+   * Handles a change from one of the position PercentSliders.
+   * @param axis Which axis to update.
+   */
+  function onPositionChange(axis: "x" | "y"): (value: number) => void {
+    return (value: number) => {
+      if (axis === "x") x = value;
+      else y = value;
+    };
   }
 </script>
 
@@ -146,14 +148,20 @@
     <div class="interactables">
       <Toggle label="Shadow" bind:value={shadow} />
       <Toggle label="Custom Position" bind:value={hasPosition} />
-      {#if hasPosition}
-        <div class="anchor">
-          <DropDown label="Preset" options={anchorOptions} value="" onChange={applyAnchorPreset} width="8.75rem" direction="UP" />
-        </div>
-        <NumberInput label="X" bind:value={x} />
-        <NumberInput label="Y" bind:value={y} />
-      {/if}
     </div>
+    {#if hasPosition}
+      <div class="position-section">
+        <div class="presets">
+          {#each anchorPresets as preset}
+            <Button width="5.5rem" on:click={() => applyAnchorPreset(preset)}>{preset.label}</Button>
+          {/each}
+        </div>
+        <div class="sliders">
+          <PercentSlider label="X" value={x} onChange={onPositionChange("x")} />
+          <PercentSlider label="Y" value={y} onChange={onPositionChange("y")} />
+        </div>
+      </div>
+    {/if}
     <div class="buttons">
       {#if canClear}
         <Button on:click={applyChanges} width="11.5rem" disabled={!canSave}>Save</Button>
@@ -202,6 +210,28 @@
     gap: 1rem;
   }
 
+  .position-section {
+    width: calc(100% - 1.25rem);
+    padding: 0rem 0.625rem;
+
+    display: flex;
+    align-items: flex-start;
+
+    gap: 1rem;
+  }
+
+  .presets {
+    display: grid;
+    grid-template-columns: repeat(3, 5.5rem);
+    gap: 0.375rem;
+  }
+
+  .sliders {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
   .buttons {
     width: calc(100% - 1.25rem);
     padding: 0rem 0.625rem 0.625rem;
@@ -211,6 +241,4 @@
 
     gap: 0.5rem;
   }
-
-  .anchor { width: 13.75rem; }
 </style>
