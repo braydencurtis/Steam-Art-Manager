@@ -51,15 +51,18 @@ In both cases the sharp/main hero is the one plain `<img>` with no extra class b
 
 **Whether the blur duplicate should also get positioned is a real design question, not just a matching-precision one.** The blur duplicate isn't unrelated art the way a capsule/icon is for the logo - it's the same hero image, just blurred for an ambient backdrop. Leaving it unmatched means it stays static while the sharp hero shifts, which can look mismatched. Decision (see issue #14): include the blur duplicate in the background rule **where it's reachable**.
 
-That's only true for default art. Scoping to the `img` tag already excludes the canvas-based custom-art duplicates for free (canvas has no `src` to match against, and nothing else ties a given canvas to one specific game - there's no way to reach it with a CSS selector at all). For default art, the `_blur` duplicate is a real `<img>`, so it can be matched deliberately by including the exact `_blur.jpg` filename:
+That's only true for default art. Scoping to the `img` tag already excludes the canvas-based custom-art duplicates for free (canvas has no `src` to match against, and nothing else ties a given canvas to one specific game - there's no way to reach it with a CSS selector at all). For default art, the `_blur` duplicate is a real `<img>` sharing the same `library_hero` path prefix as the sharp one, differing only by the inserted `_blur` before the extension - matching on that prefix alone (see "No fixed extension" below) picks up both without needing to spell out `_blur` as a separate pattern:
 
 ```css
-img[src*="/customimages/<appid>_hero.jpg"],        /* custom art, sharp only - canvas blur duplicates unreachable */
-img[src*="/assets/<appid>/library_hero.jpg"],      /* default art, sharp */
-img[src*="/assets/<appid>/library_hero_blur.jpg"]  /* default art, blur backdrop - moved in sync with the sharp image */
+img[src*="/customimages/<appid>_hero"],   /* custom art, sharp only - canvas blur duplicates unreachable */
+img[src*="/assets/<appid>/library_hero"]  /* default art, sharp AND blur backdrop (moved in sync with the sharp image) */
 ```
 
 This means custom-art games (the primary use case - a user is actively theming that game) only get the sharp hero repositioned, while default-art games get both. An accepted, asymmetric tradeoff given the canvas limitation, not an oversight.
+
+## No fixed extension: a real library mixes `.jpg` and `.png`
+
+An earlier version of the selector above required the literal `.jpg` extension (to exclude the `_blur` duplicate by exact filename, before the "match on the shared prefix instead" approach above was adopted). That silently broke background positioning for every game whose hero art wasn't `.jpg` - confirmed by listing a real Steam grid folder (`.../userdata/<id>/config/grid/*_hero.*`): roughly half the entries are `.png`, the rest `.jpg`. The selector must never assume a specific extension; matching on the path prefix alone (as shown above) covers whatever format a given game's source image actually was.
 
 ## Remaining open questions
 

@@ -237,8 +237,8 @@ describe("compileLogoStyleTheme", () => {
 
     const css = compileLogoStyleTheme(overrides, SELECTORS);
 
-    expect(css).toContain("img[src*=\"/customimages/620_hero.jpg\"]");
-    expect(css).toContain("img[src*=\"/assets/620/library_hero.jpg\"]");
+    expect(css).toContain("img[src*=\"/customimages/620_hero\"]");
+    expect(css).toContain("img[src*=\"/assets/620/library_hero\"]");
     // object-position's X is inverted from the stored value - a lower X reveals
     // the image's left portion, which reads visually as the art shifting right,
     // so 25 (dragged toward "left") compiles to object-position 75%.
@@ -263,18 +263,28 @@ describe("compileLogoStyleTheme", () => {
     }
   });
 
-  it("also slides the default-art blurred backdrop duplicate in sync with the sharp hero", () => {
-    // Steam renders 2 extra blurred copies of the hero image for a backdrop
-    // effect - for default art these are real <img> tags ("_blur" inserted
-    // before the extension), so the background rule matches them too, rather
-    // than leaving the blurred backdrop static while the sharp hero shifts.
+  it("matches hero art regardless of file extension - a real library's grid folder mixes .jpg and .png depending on the source image", () => {
+    // The selector deliberately has no extension baked in (confirmed via a
+    // real Steam grid folder: roughly half its hero files are .png, not
+    // .jpg) - requiring one, as an earlier version of this selector did,
+    // silently broke background positioning for every game whose art wasn't
+    // that one format.
     const overrides: Record<string, LogoStyleOverride> = {
-      "620": { background: { x: 25 } },
+      "620": { background: { x: 50 } },
     };
 
     const css = compileLogoStyleTheme(overrides, SELECTORS);
 
-    expect(css).toContain("img[src*=\"/assets/620/library_hero_blur.jpg\"]");
+    expect(css).not.toContain("library_hero.jpg");
+    expect(css).not.toContain("library_hero.png");
+
+    // Simulates the browser's `[src*="..."]` substring match against real
+    // Steam grid filenames, proving the emitted pattern covers both formats
+    // for the sharp image and (intentionally) the blurred backdrop duplicate.
+    const selectorFragment = "/assets/620/library_hero";
+    expect("/assets/620/library_hero.jpg?c=123".includes(selectorFragment)).toBe(true);
+    expect("/assets/620/library_hero.png?c=123".includes(selectorFragment)).toBe(true);
+    expect("/assets/620/library_hero_blur.png?c=123".includes(selectorFragment)).toBe(true);
   });
 
   it("keeps a game's logo and background rules independent when both are set", () => {
@@ -285,7 +295,7 @@ describe("compileLogoStyleTheme", () => {
     const css = compileLogoStyleTheme(overrides, SELECTORS);
 
     expect(css).toContain("img[src*=\"/620/logo\"]");
-    expect(css).toContain("img[src*=\"/customimages/620_hero.jpg\"]");
+    expect(css).toContain("img[src*=\"/customimages/620_hero\"]");
     expect(css).toContain("object-position: 0% 0% !important;");
     expect(css).toContain("object-position: 20% 50% !important;");
   });

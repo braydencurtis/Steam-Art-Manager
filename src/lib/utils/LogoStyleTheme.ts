@@ -14,22 +14,27 @@ function buildShadowFilter(shadow: LogoShadowStyle): string {
 
 /**
  * Builds the selector matching a game's hero image, across both art sources
- * Steam can serve it from - including the blurred backdrop duplicate Steam
- * renders alongside it, so the blur shifts in sync with the sharp image
- * instead of staying static. Only reachable for default Steam art, where the
- * blur duplicate is a real `<img>` with "_blur" inserted before ".jpg" - for
- * custom (SARM-managed) art the blur duplicates are `<canvas>` elements with
- * no `src` at all, and nothing else ties a given canvas to a specific game, so
- * there's no way to target one game's canvas duplicate with a CSS selector.
+ * Steam can serve it from. Deliberately matches on extension-less path
+ * fragments only - a game's hero art can be served as .jpg, .png, or other
+ * formats depending on what the source image actually was (confirmed:
+ * roughly half a real library's grid folder is .png, not .jpg), so requiring
+ * a specific extension silently breaks for every game whose art isn't that
+ * one format. Naturally also matches the blurred backdrop duplicate Steam
+ * renders alongside the default-art sharp image (a real `<img>` with "_blur"
+ * inserted before the extension), which is intentional - the blur shifts in
+ * sync with the sharp image instead of staying static. Custom (SARM-managed)
+ * art's blur duplicates are `<canvas>` elements with no `src` at all, and
+ * nothing else ties a given canvas to a specific game, so there's no way to
+ * target one game's canvas duplicate with a CSS selector - already excluded
+ * for free by scoping to `img`.
  * See docs/hero-background-dom-investigation.md for the DevTools findings
  * this is based on.
  * @param appid The game's Steam app ID.
  */
 function buildHeroImageSelector(appid: string): string {
   return [
-    `img[src*="/customimages/${appid}_hero.jpg"]`,
-    `img[src*="/assets/${appid}/library_hero.jpg"]`,
-    `img[src*="/assets/${appid}/library_hero_blur.jpg"]`,
+    `img[src*="/customimages/${appid}_hero"]`,
+    `img[src*="/assets/${appid}/library_hero"]`,
   ].join(",\n");
 }
 
