@@ -41,7 +41,7 @@ function compileGameRules(appid: string, override: LogoStyleOverride, domSelecto
   }
 
   if (override.shadow) {
-    imgProps.push("  filter: var(--logo-shadow) !important;");
+    imgProps.push(`  filter: ${buildShadowFilter(override.shadow)} !important;`);
   }
 
   if (imgProps.length > 0) {
@@ -52,28 +52,22 @@ function compileGameRules(appid: string, override: LogoStyleOverride, domSelecto
 }
 
 /**
- * Compiles a per-game Logo Style Override map plus global settings into the complete
- * Theme CSS file contents. Pure - no filesystem access, no Tauri `invoke` calls.
+ * Compiles a per-game Logo Style Override map into the complete Theme CSS file
+ * contents. Pure - no filesystem access, no Tauri `invoke` calls. Every per-game
+ * shadow is fully self-contained data (a copy made when the game's shadow was
+ * turned on), so there's no shared global CSS to emit here.
  * @param overrides The per-appid Logo Style Overrides to compile.
- * @param globalShadowStyle The CSS `filter` value applied to every game with its shadow toggle on.
  * @param domSelectors The class-name fragments used to target Steam's CEF-rendered logo elements.
  * @returns The complete Theme CSS file contents.
  */
 export function compileLogoStyleTheme(
   overrides: Record<string, LogoStyleOverride>,
-  globalShadowStyle: LogoShadowStyle,
   domSelectors: LogoStyleDomSelectors
 ): string {
-  const root = [
-    ":root {",
-    `  --logo-shadow: ${buildShadowFilter(globalShadowStyle)};`,
-    "}",
-  ].join("\n");
-
   const gameBlocks = Object.entries(overrides)
     .filter(([, override]) => override.shadow || override.position)
     .map(([appid, override]) => compileGameRules(appid, override, domSelectors))
     .filter((block) => block.length > 0);
 
-  return [root, ...gameBlocks].join("\n\n");
+  return gameBlocks.join("\n\n");
 }

@@ -21,7 +21,7 @@ import { createTippy } from "svelte-tippy";
 import { get } from "svelte/store";
 import { hideAll, type Instance, type Props } from "tippy.js";
 import "tippy.js/dist/tippy.css";
-import { Platforms, activeUserId, appLibraryCache, cacheSelectedGrids, canSave, currentPlatform, customGameNames, gridType, isOnline, loadingGames, logoStyleDomSelectors, logoStyleOverrides, logoStyleShadowStyle, logoStyleThemeCssPath, manualSteamGames, needsSGDBAPIKey, needsSteamKey, nonSteamGames, originalAppLibraryCache, originalLogoPositions, originalSteamShortcuts, selectedGameAppId, selectedGameName, showErrorSnackbar, showInfoSnackbar, steamGames, steamKey, steamLogoPositions, steamShortcuts, steamUsers, unfilteredLibraryCache } from "../../stores/AppState";
+import { Platforms, activeUserId, appLibraryCache, cacheSelectedGrids, canSave, currentPlatform, customGameNames, gridType, isOnline, loadingGames, logoStyleDomSelectors, logoStyleOverrides, logoStyleThemeCssPath, manualSteamGames, needsSGDBAPIKey, needsSteamKey, nonSteamGames, originalAppLibraryCache, originalLogoPositions, originalSteamShortcuts, selectedGameAppId, selectedGameName, showErrorSnackbar, showInfoSnackbar, steamGames, steamKey, steamLogoPositions, steamShortcuts, steamUsers, unfilteredLibraryCache } from "../../stores/AppState";
 import { cleanConflicts, gameSearchModalCancel, gameSearchModalDefault, gameSearchModalSelect, gridModalInfo, showCleanConflictDialog, showGameSearchModal, showGridModal, showSettingsModal } from "../../stores/Modals";
 import { CacheController } from "./CacheController";
 import { SteamController } from "./SteamController";
@@ -117,7 +117,7 @@ export class AppController {
 
     const currentLogoStyleOverrides = get(logoStyleOverrides);
     const themeCssPath = get(logoStyleThemeCssPath);
-    const themeCss = themeCssPath !== "" ? compileLogoStyleTheme(currentLogoStyleOverrides, get(logoStyleShadowStyle), get(logoStyleDomSelectors)) : "";
+    const themeCss = themeCssPath !== "" ? compileLogoStyleTheme(currentLogoStyleOverrides, get(logoStyleDomSelectors)) : "";
 
     const changedPaths = await RustInterop.saveChanges(get(activeUserId).toString(), libraryCache, originalCache, shortcuts, shortcutIcons, originalShortcutIcons, logoPosStrings, themeCssPath, themeCss);
     

@@ -20,9 +20,11 @@ export type LogoBackgroundOverride = {
 /**
  * A per-game Logo Style Override. Shadow, position, and background are independent -
  * any combination, or (when absent from the overrides map) none, can be set for a game.
+ * A present `shadow` is a full copy of the shadow style at the moment it was turned
+ * on for this game, tunable independently from the global default afterward.
  */
 export type LogoStyleOverride = {
-  shadow: boolean,
+  shadow?: LogoShadowStyle,
   position?: LogoPositionOverride,
   background?: LogoBackgroundOverride,
 };
@@ -38,8 +40,9 @@ export type LogoShadowLayer = {
 };
 
 /**
- * The shadow applied to every game with its shadow toggle on - two stacked
- * `drop-shadow()` layers for visual depth.
+ * Two stacked `drop-shadow()` layers for visual depth. Used both as the global
+ * default (the settings-level fallback new per-game shadows are seeded from)
+ * and as a per-game `LogoStyleOverride.shadow`, once copied and tuned.
  */
 export type LogoShadowStyle = {
   layer1: LogoShadowLayer,

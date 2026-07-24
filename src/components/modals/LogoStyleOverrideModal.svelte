@@ -5,7 +5,7 @@
   import { logoStyleDomSelectors, logoStyleOverrides, logoStyleShadowStyle, logoStyleThemeCssPath, manualSteamGames, nonSteamGames, selectedGameAppId, steamGames, steamLogoPositions } from "@stores/AppState";
   import { showLogoStyleOverrideModal } from "@stores/Modals";
   import { writeTextFile } from "@tauri-apps/plugin-fs";
-  import type { LogoStyleOverride } from "@types";
+  import type { LogoShadowStyle, LogoStyleOverride } from "@types";
   import { compileLogoStyleTheme, debounce } from "@utils";
   import { get } from "svelte/store";
   import ModalBody from "./modal-utils/ModalBody.svelte";
@@ -19,7 +19,7 @@
     const path = get(logoStyleThemeCssPath);
     if (path === "") return;
 
-    const css = compileLogoStyleTheme(overrides, get(logoStyleShadowStyle), get(logoStyleDomSelectors));
+    const css = compileLogoStyleTheme(overrides, get(logoStyleDomSelectors));
     try {
       await writeTextFile(path, css);
     } catch (e: any) {
@@ -34,9 +34,9 @@
   function liveOverrides(): Record<string, LogoStyleOverride> {
     const overrides = { ...get(logoStyleOverrides) };
 
-    if (shadow || hasPosition || hasBackground) {
+    if (hasShadow || hasPosition || hasBackground) {
       overrides[$selectedGameAppId] = {
-        shadow,
+        ...(hasShadow ? { shadow: buildShadow() } : {}),
         ...(hasPosition ? { position: { x, y } } : {}),
         ...(hasBackground ? { background: { x: backgroundX } } : {}),
       };
@@ -89,22 +89,62 @@
 
   const existingOverride = $logoStyleOverrides[$selectedGameAppId];
 
-  const originalShadow = existingOverride?.shadow ?? false;
+  const originalShadow = existingOverride?.shadow;
+  const originalHasShadow = !!originalShadow;
   const originalHasPosition = !!existingOverride?.position;
   const originalX = existingOverride?.position?.x ?? 50;
   const originalY = existingOverride?.position?.y ?? 50;
   const originalHasBackground = !!existingOverride?.background;
   const originalBackgroundX = existingOverride?.background?.x ?? 50;
 
-  let shadow = originalShadow;
+  let hasShadow = originalHasShadow;
+  let shadowLayer1Radius = originalShadow?.layer1.radius ?? $logoStyleShadowStyle.layer1.radius;
+  let shadowLayer1Opacity = originalShadow?.layer1.opacity ?? $logoStyleShadowStyle.layer1.opacity;
+  let shadowLayer2Radius = originalShadow?.layer2.radius ?? $logoStyleShadowStyle.layer2.radius;
+  let shadowLayer2Opacity = originalShadow?.layer2.opacity ?? $logoStyleShadowStyle.layer2.opacity;
   let hasPosition = originalHasPosition;
   let x = originalX;
   let y = originalY;
   let hasBackground = originalHasBackground;
   let backgroundX = originalBackgroundX;
 
+  /**
+   * Builds a shadow style from the current per-game shadow layer controls.
+   */
+  function buildShadow(): LogoShadowStyle {
+    return {
+      layer1: { radius: shadowLayer1Radius, opacity: shadowLayer1Opacity },
+      layer2: { radius: shadowLayer2Radius, opacity: shadowLayer2Opacity },
+    };
+  }
+
+  /**
+   * Runs when the Shadow toggle changes - toggling on re-seeds the per-game
+   * controls from a copy of the current global default, so a game's shadow
+   * always starts from the same baseline it would get in Big Picture Mode
+   * before being tuned independently.
+   */
+  function onShadowToggleChange(): void {
+    if (!hasShadow) return;
+
+    const globalDefault = get(logoStyleShadowStyle);
+    shadowLayer1Radius = globalDefault.layer1.radius;
+    shadowLayer1Opacity = globalDefault.layer1.opacity;
+    shadowLayer2Radius = globalDefault.layer2.radius;
+    shadowLayer2Opacity = globalDefault.layer2.opacity;
+  }
+
+  // Svelte's `$:` dependency tracking only sees identifiers referenced directly
+  // in the statement, not ones a called function (like buildShadow()) closes
+  // over - so this rebuilds the shape inline, referencing every slider field
+  // by name, to make sure canSave actually reacts to shadow slider changes.
+  $: currentShadowSnapshot = hasShadow
+    ? { layer1: { radius: shadowLayer1Radius, opacity: shadowLayer1Opacity }, layer2: { radius: shadowLayer2Radius, opacity: shadowLayer2Opacity } }
+    : undefined;
+
   $: canClear = !!existingOverride;
-  $: canSave = shadow !== originalShadow
+  $: canSave = hasShadow !== originalHasShadow
+    || (hasShadow && JSON.stringify(currentShadowSnapshot) !== JSON.stringify(originalShadow))
     || hasPosition !== originalHasPosition
     || (hasPosition && (x !== originalX || y !== originalY))
     || hasBackground !== originalHasBackground
@@ -113,14 +153,14 @@
   $: hasNativeLogoPosition = $steamLogoPositions[$selectedGameAppId]?.logoPosition.pinnedPosition !== undefined
     && $steamLogoPositions[$selectedGameAppId]?.logoPosition.pinnedPosition !== "REMOVE";
 
-  $: { shadow; hasPosition; x; y; hasBackground; backgroundX; debouncedLiveWrite(); }
+  $: { hasShadow; shadowLayer1Radius; shadowLayer1Opacity; shadowLayer2Radius; shadowLayer2Opacity; hasPosition; x; y; hasBackground; backgroundX; debouncedLiveWrite(); }
 
   /**
    * Apply the Logo Style Override changes.
    */
   function applyChanges(): void {
     const override: LogoStyleOverride = {
-      shadow,
+      ...(hasShadow ? { shadow: buildShadow() } : {}),
       ...(hasPosition ? { position: { x, y } } : {}),
       ...(hasBackground ? { background: { x: backgroundX } } : {}),
     };
@@ -155,6 +195,38 @@
   function onBackgroundXChange(value: number): void {
     backgroundX = value;
   }
+
+  /**
+   * Handles a change from the shadow layer 1 radius PercentSlider.
+   * @param value The updated radius, in pixels.
+   */
+  function onShadowLayer1RadiusChange(value: number): void {
+    shadowLayer1Radius = value;
+  }
+
+  /**
+   * Handles a change from the shadow layer 1 opacity PercentSlider.
+   * @param percent The updated opacity, as a 0-100 percent (converted to 0-1 for storage).
+   */
+  function onShadowLayer1OpacityChange(percent: number): void {
+    shadowLayer1Opacity = percent / 100;
+  }
+
+  /**
+   * Handles a change from the shadow layer 2 radius PercentSlider.
+   * @param value The updated radius, in pixels.
+   */
+  function onShadowLayer2RadiusChange(value: number): void {
+    shadowLayer2Radius = value;
+  }
+
+  /**
+   * Handles a change from the shadow layer 2 opacity PercentSlider.
+   * @param percent The updated opacity, as a 0-100 percent (converted to 0-1 for storage).
+   */
+  function onShadowLayer2OpacityChange(percent: number): void {
+    shadowLayer2Opacity = percent / 100;
+  }
 </script>
 
 <ModalBody title={`Set Logo Style for ${game?.name}`} open={open} on:close={() => open = false} on:closeEnd={onClose}>
@@ -166,10 +238,22 @@
       </div>
     {/if}
     <div class="interactables">
-      <Toggle label="Shadow" bind:value={shadow} />
+      <Toggle label="Shadow" bind:value={hasShadow} on:change={onShadowToggleChange} />
       <Toggle label="Custom Position" bind:value={hasPosition} />
       <Toggle label="Background Position" bind:value={hasBackground} />
     </div>
+    {#if hasShadow}
+      <div class="shadow-section">
+        <div class="shadow-layer">
+          <PercentSlider label="Layer 1 Radius" min={0} max={60} value={shadowLayer1Radius} onChange={onShadowLayer1RadiusChange} />
+          <PercentSlider label="Layer 1 Opacity" min={0} max={100} value={Math.round(shadowLayer1Opacity * 100)} onChange={onShadowLayer1OpacityChange} />
+        </div>
+        <div class="shadow-layer">
+          <PercentSlider label="Layer 2 Radius" min={0} max={30} value={shadowLayer2Radius} onChange={onShadowLayer2RadiusChange} />
+          <PercentSlider label="Layer 2 Opacity" min={0} max={100} value={Math.round(shadowLayer2Opacity * 100)} onChange={onShadowLayer2OpacityChange} />
+        </div>
+      </div>
+    {/if}
     {#if hasPosition}
       <div class="position-section">
         <div class="presets">
@@ -234,6 +318,21 @@
     align-items: center;
 
     gap: 1rem;
+  }
+
+  .shadow-section {
+    width: calc(100% - 1.25rem);
+    padding: 0rem 0.625rem;
+
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .shadow-layer {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
   }
 
   .position-section {

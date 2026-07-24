@@ -7,64 +7,78 @@ const SHADOW_STYLE: LogoShadowStyle = {
   layer2: { radius: 4, opacity: 0.6 },
 };
 
+const OTHER_SHADOW_STYLE: LogoShadowStyle = {
+  layer1: { radius: 99, opacity: 0.12 },
+  layer2: { radius: 7, opacity: 0.34 },
+};
+
 const SELECTORS: LogoStyleDomSelectors = {
   outerBoxSelector: "OUTER_CLASS",
   innerWrapperSelector: "INNER_CLASS",
 };
 
 describe("compileLogoStyleTheme", () => {
-  it("always emits a :root block with the global shadow style built from structured radius/opacity", () => {
-    const css = compileLogoStyleTheme({}, SHADOW_STYLE, SELECTORS);
+  it("emits nothing for an empty override map", () => {
+    const css = compileLogoStyleTheme({}, SELECTORS);
 
-    expect(css).toContain(":root");
-    expect(css).toContain("--logo-shadow: drop-shadow(0px 4px 30px rgba(0, 0, 0, 0.85)) drop-shadow(0px 2px 4px rgba(0, 0, 0, 0.6));");
-  });
-
-  it("reflects radius/opacity inputs in the built filter, with offset and color always fixed regardless of input", () => {
-    const customShadow: LogoShadowStyle = {
-      layer1: { radius: 99, opacity: 0.12 },
-      layer2: { radius: 7, opacity: 0.34 },
-    };
-
-    const css = compileLogoStyleTheme({}, customShadow, SELECTORS);
-
-    // Radius/opacity flow through from input.
-    expect(css).toContain("99px rgba(0, 0, 0, 0.12)");
-    expect(css).toContain("7px rgba(0, 0, 0, 0.34)");
-    // Offset and color stay fixed regardless of input.
-    expect(css).toContain("drop-shadow(0px 4px 99px rgba(0, 0, 0, 0.12))");
-    expect(css).toContain("drop-shadow(0px 2px 7px rgba(0, 0, 0, 0.34))");
+    expect(css).toBe("");
   });
 
   it("omits any appid with no override entirely", () => {
     const overrides: Record<string, LogoStyleOverride> = {
-      "570": { shadow: false },
+      "570": {},
     };
 
-    const css = compileLogoStyleTheme(overrides, SHADOW_STYLE, SELECTORS);
+    const css = compileLogoStyleTheme(overrides, SELECTORS);
 
     expect(css).not.toContain("/570/");
   });
 
-  it("emits a shadow-only rule for a game with shadow but no position", () => {
+  it("emits a shadow-only rule for a game with shadow but no position, built from that game's own structured shadow", () => {
     const overrides: Record<string, LogoStyleOverride> = {
-      "2909400": { shadow: true },
+      "2909400": { shadow: SHADOW_STYLE },
     };
 
-    const css = compileLogoStyleTheme(overrides, SHADOW_STYLE, SELECTORS);
+    const css = compileLogoStyleTheme(overrides, SELECTORS);
 
     expect(css).toContain("img[src*=\"/2909400/logo\"]");
-    expect(css).toContain("filter: var(--logo-shadow) !important;");
+    expect(css).toContain("filter: drop-shadow(0px 4px 30px rgba(0, 0, 0, 0.85)) drop-shadow(0px 2px 4px rgba(0, 0, 0, 0.6)) !important;");
     // No position was set, so no outer-box positioning rule should be emitted for this game.
     expect(css).not.toContain("div[class*=\"OUTER_CLASS\"]:has(img[src*=\"/2909400/logo\"])");
   });
 
-  it("emits a position-only rule for a game with a position but no shadow, using exact x/y values", () => {
+  it("reflects each game's own radius/opacity in its filter, with offset and color always fixed regardless of input", () => {
     const overrides: Record<string, LogoStyleOverride> = {
-      "1091500": { shadow: false, position: { x: 73, y: 12 } },
+      "1": { shadow: OTHER_SHADOW_STYLE },
     };
 
-    const css = compileLogoStyleTheme(overrides, SHADOW_STYLE, SELECTORS);
+    const css = compileLogoStyleTheme(overrides, SELECTORS);
+
+    expect(css).toContain("drop-shadow(0px 4px 99px rgba(0, 0, 0, 0.12))");
+    expect(css).toContain("drop-shadow(0px 2px 7px rgba(0, 0, 0, 0.34))");
+  });
+
+  it("lets two games diverge independently - each game's shadow is self-contained data, not a shared default", () => {
+    const overrides: Record<string, LogoStyleOverride> = {
+      "1": { shadow: SHADOW_STYLE },
+      "2": { shadow: OTHER_SHADOW_STYLE },
+    };
+
+    const css = compileLogoStyleTheme(overrides, SELECTORS);
+
+    expect(css).toContain("drop-shadow(0px 4px 30px rgba(0, 0, 0, 0.85)) drop-shadow(0px 2px 4px rgba(0, 0, 0, 0.6))");
+    expect(css).toContain("drop-shadow(0px 4px 99px rgba(0, 0, 0, 0.12)) drop-shadow(0px 2px 7px rgba(0, 0, 0, 0.34))");
+    // No shared CSS variable indirection - each game's filter is fully inline.
+    expect(css).not.toContain("--logo-shadow");
+    expect(css).not.toContain("var(--logo-shadow)");
+  });
+
+  it("emits a position-only rule for a game with a position but no shadow, using exact x/y values", () => {
+    const overrides: Record<string, LogoStyleOverride> = {
+      "1091500": { position: { x: 73, y: 12 } },
+    };
+
+    const css = compileLogoStyleTheme(overrides, SELECTORS);
 
     expect(css).toContain("div[class*=\"OUTER_CLASS\"]:has(img[src*=\"/1091500/logo\"])");
     expect(css).toContain("left: 73% !important;");
@@ -73,18 +87,18 @@ describe("compileLogoStyleTheme", () => {
     expect(css).toContain("object-position: 73% 12% !important;");
     // No shadow was requested for this game.
     const gameSection = css.split("img[src*=\"/1091500/logo\"]")[2] ?? "";
-    expect(gameSection).not.toContain("filter: var(--logo-shadow)");
+    expect(gameSection).not.toContain("filter:");
   });
 
   it("emits both position and shadow rules for a game with both set", () => {
     const overrides: Record<string, LogoStyleOverride> = {
-      "1462040": { shadow: true, position: { x: 0, y: 50 } },
+      "1462040": { shadow: SHADOW_STYLE, position: { x: 0, y: 50 } },
     };
 
-    const css = compileLogoStyleTheme(overrides, SHADOW_STYLE, SELECTORS);
+    const css = compileLogoStyleTheme(overrides, SELECTORS);
 
     expect(css).toContain("div[class*=\"OUTER_CLASS\"]:has(img[src*=\"/1462040/logo\"])");
-    expect(css).toContain("filter: var(--logo-shadow) !important;");
+    expect(css).toContain("filter: drop-shadow(0px 4px 30px rgba(0, 0, 0, 0.85)) drop-shadow(0px 2px 4px rgba(0, 0, 0, 0.6)) !important;");
     expect(css).toContain("left: 0% !important;");
     expect(css).toContain("top: 50% !important;");
     expect(css).toContain("transform: translate(0%, -50%) !important;");
@@ -92,11 +106,11 @@ describe("compileLogoStyleTheme", () => {
 
   it("handles multiple games independently in one output", () => {
     const overrides: Record<string, LogoStyleOverride> = {
-      "570": { shadow: true },
-      "1091500": { shadow: false, position: { x: 100, y: 100 } },
+      "570": { shadow: SHADOW_STYLE },
+      "1091500": { position: { x: 100, y: 100 } },
     };
 
-    const css = compileLogoStyleTheme(overrides, SHADOW_STYLE, SELECTORS);
+    const css = compileLogoStyleTheme(overrides, SELECTORS);
 
     expect(css).toContain("img[src*=\"/570/logo\"]");
     expect(css).toContain("img[src*=\"/1091500/logo\"]");
@@ -106,10 +120,10 @@ describe("compileLogoStyleTheme", () => {
 
   it("never emits inner-wrapper flex-alignment CSS anywhere in the output", () => {
     const overrides: Record<string, LogoStyleOverride> = {
-      "42": { shadow: true, position: { x: 50, y: 50 } },
+      "42": { shadow: SHADOW_STYLE, position: { x: 50, y: 50 } },
     };
 
-    const css = compileLogoStyleTheme(overrides, SHADOW_STYLE, SELECTORS);
+    const css = compileLogoStyleTheme(overrides, SELECTORS);
 
     expect(css).not.toContain("INNER_CLASS");
     expect(css).not.toContain("align-items");
@@ -126,10 +140,10 @@ describe("compileLogoStyleTheme", () => {
 
     for (const { x, y } of corners) {
       const overrides: Record<string, LogoStyleOverride> = {
-        "1": { shadow: false, position: { x, y } },
+        "1": { position: { x, y } },
       };
 
-      const css = compileLogoStyleTheme(overrides, SHADOW_STYLE, SELECTORS);
+      const css = compileLogoStyleTheme(overrides, SELECTORS);
 
       expect(css).toContain(`left: ${x}% !important;`);
       expect(css).toContain(`top: ${y}% !important;`);
@@ -140,10 +154,10 @@ describe("compileLogoStyleTheme", () => {
 
   it("emits no CSS for a game with only a background override set (no CSS generation yet - plumbing only)", () => {
     const overrides: Record<string, LogoStyleOverride> = {
-      "620": { shadow: false, background: { x: 25 } },
+      "620": { background: { x: 25 } },
     };
 
-    const css = compileLogoStyleTheme(overrides, SHADOW_STYLE, SELECTORS);
+    const css = compileLogoStyleTheme(overrides, SELECTORS);
 
     expect(css).not.toContain("/620/");
   });
@@ -155,10 +169,10 @@ describe("compileLogoStyleTheme", () => {
     // Every selector must require "logo" in the filename, or a positioning/shadow
     // rule meant for the logo will also apply to unrelated art for the same game.
     const overrides: Record<string, LogoStyleOverride> = {
-      "1675830": { shadow: true, position: { x: 100, y: 0 } },
+      "1675830": { shadow: SHADOW_STYLE, position: { x: 100, y: 0 } },
     };
 
-    const css = compileLogoStyleTheme(overrides, SHADOW_STYLE, SELECTORS);
+    const css = compileLogoStyleTheme(overrides, SELECTORS);
 
     const matches = css.match(/img\[src\*="\/1675830\/[^"]*"\]/g) ?? [];
     expect(matches.length).toBeGreaterThan(0);
