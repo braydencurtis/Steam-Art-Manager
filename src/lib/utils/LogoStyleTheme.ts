@@ -70,9 +70,16 @@ function compileGameRules(appid: string, override: LogoStyleOverride, domSelecto
   }
 
   if (override.background) {
+    // object-position's X is where the *image's* corresponding point lands in
+    // the box, not a "pan the visible content" value - a lower X reveals the
+    // image's left portion, which reads visually as the art having shifted
+    // *right*. Inverting here keeps the stored/slider-facing x matching the
+    // intuitive direction (drag left -> art visibly moves left).
+    const objectPositionX = 100 - override.background.x;
+
     blocks.push([
       `${buildHeroImageSelector(appid)} {`,
-      `  object-position: ${override.background.x}% 50% !important;`,
+      `  object-position: ${objectPositionX}% 50% !important;`,
       "}",
     ].join("\n"));
   }

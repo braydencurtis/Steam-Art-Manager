@@ -161,7 +161,28 @@ describe("compileLogoStyleTheme", () => {
 
     expect(css).toContain("img[src*=\"/customimages/620_hero.jpg\"]");
     expect(css).toContain("img[src*=\"/assets/620/library_hero.jpg\"]");
-    expect(css).toContain("object-position: 25% 50% !important;");
+    // object-position's X is inverted from the stored value - a lower X reveals
+    // the image's left portion, which reads visually as the art shifting right,
+    // so 25 (dragged toward "left") compiles to object-position 75%.
+    expect(css).toContain("object-position: 75% 50% !important;");
+  });
+
+  it("keeps object-position centered when background X is 50, and fully inverts at the extremes", () => {
+    const corners = [
+      { x: 0, expectedObjectPositionX: 100 },
+      { x: 50, expectedObjectPositionX: 50 },
+      { x: 100, expectedObjectPositionX: 0 },
+    ];
+
+    for (const { x, expectedObjectPositionX } of corners) {
+      const overrides: Record<string, LogoStyleOverride> = {
+        "1": { background: { x } },
+      };
+
+      const css = compileLogoStyleTheme(overrides, SELECTORS);
+
+      expect(css).toContain(`object-position: ${expectedObjectPositionX}% 50% !important;`);
+    }
   });
 
   it("also slides the default-art blurred backdrop duplicate in sync with the sharp hero", () => {
@@ -188,7 +209,7 @@ describe("compileLogoStyleTheme", () => {
     expect(css).toContain("img[src*=\"/620/logo\"]");
     expect(css).toContain("img[src*=\"/customimages/620_hero.jpg\"]");
     expect(css).toContain("object-position: 0% 0% !important;");
-    expect(css).toContain("object-position: 80% 50% !important;");
+    expect(css).toContain("object-position: 20% 50% !important;");
   });
 
   it("does not match a non-logo image sharing the same appid prefix, like a hero background", () => {
