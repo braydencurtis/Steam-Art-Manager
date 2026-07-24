@@ -25,18 +25,46 @@ Unlike the logo (always `/<appid>/logo...`, one consistent shape), the hero imag
 | Custom (SARM-managed) | `/customimages/1462040_hero.jpg?v=1784768603` | `/customimages/<appid>_hero` |
 | Steam default | `/assets/57300/library_hero.jpg?c=496391688` | `/assets/<appid>/library_hero` |
 
-**A selector targeting one game must match both shapes** (via a comma-separated selector list, or two DOM Selector fields), or games without SARM-managed hero art won't be targetable at all. This is a structural difference from the logo case and needs to be reflected in both the `LogoStyleDomSelectors` type (or a new type) and `compileLogoStyleTheme`'s background rule builder.
+**A selector targeting one game must match both shapes** (via a comma-separated selector list, or two DOM Selector fields), or games without SARM-managed hero art won't be targetable at all. This is a structural difference from the logo case and needs to be reflected in both the `LogoStyleDomSelectors` type (or a new type) and `compileLogoStyleTheme`'s background rule builder. See the exact match pattern below - it needs the `.jpg` extension included, not just the path prefix (see Uniqueness).
 
-Draft selector shape for a given `appid`:
+## Uniqueness: three elements share the image class, not one
 
-```css
-img[src*="/customimages/<appid>_hero"],
-img[src*="/assets/<appid>/library_hero"]
+`document.querySelectorAll(".HNbe3eZf6H7dtJ042x1vM").length` returns `3` on a game's page, not `1` - Steam renders a blurred backdrop effect using duplicate copies of the hero art. Critically, **how the duplicate is implemented differs by art source**:
+
+**Default Steam art** (appid 57300) - the blur duplicates are `<img>` tags with a distinct filename:
+
+```html
+<img class="HNbe3eZf6H7dtJ042x1vM HSQWw9HUAP6jtA2OZjS-u" src="/assets/57300/library_hero_blur.jpg?c=496391688">
+<img class="HNbe3eZf6H7dtJ042x1vM" src="/assets/57300/library_hero.jpg?c=496391688">
+<img class="HNbe3eZf6H7dtJ042x1vM HSQWw9HUAP6jtA2OZjS-u _3_IUVzR9tpG_JKEjhwXEAb" src="/assets/57300/library_hero_blur.jpg?c=496391688">
 ```
 
-## Open questions / not yet confirmed
+**Custom art** (appid 1462040, SARM-managed) - the blur duplicates are `<canvas>` elements instead (client-rendered, no `src` at all - Steam has no pre-generated blur asset for custom images):
 
-- **Uniqueness**: not confirmed whether `QlR9EFwTdUNm_J5vx54_Z`/`HNbe3eZf6H7dtJ042x1vM` appear exactly once per game page (vs. also matching a thumbnail or a second/smaller preview elsewhere in the DOM). Worth a duplicate-count check (e.g. `document.querySelectorAll(".HNbe3eZf6H7dtJ042x1vM").length` in the console while on a game's page) before shipping issue #14, since a non-unique match could apply background positioning to the wrong element.
+```html
+<canvas class="HNbe3eZf6H7dtJ042x1vM HSQWw9HUAP6jtA2OZjS-u" width="134" height="63"></canvas>
+<img class="HNbe3eZf6H7dtJ042x1vM" src="/customimages/1462040_hero.jpg?v=1784768603">
+<canvas class="HNbe3eZf6H7dtJ042x1vM HSQWw9HUAP6jtA2OZjS-u _3_IUVzR9tpG_JKEjhwXEAb" width="269" height="127"></canvas>
+```
+
+In both cases the sharp/main hero is the one plain `<img>` with no extra class beyond `HNbe3eZf6H7dtJ042x1vM`, and the blur duplicates carry an additional `HSQWw9HUAP6jtA2OZjS-u` class (a third, `_3_IUVzR9tpG_JKEjhwXEAb`, showed up on one duplicate in both cases too - likely a transition/crossfade state, not investigated further).
+
+**This resolves cleanly without needing the extra class as a discriminator**: scoping any selector to the `img` tag already excludes the canvas-based custom-art duplicates for free (canvas has no `src` to match against). For default art, the `_blur` duplicates need the match pattern to include the exact filename, not just a loose substring - `"library_hero_blur.jpg"` does **not** contain `"library_hero.jpg"` as a substring (the `_blur` sits between `hero` and `.jpg`), so:
+
+```css
+img[src*="/assets/<appid>/library_hero.jpg"]   /* default art - excludes the _blur.jpg duplicates */
+img[src*="/customimages/<appid>_hero.jpg"]     /* custom art - canvas duplicates already excluded by the img tag */
+```
+
+Revised draft selector (superseding the looser one above, which would have incorrectly also matched the default-art blur duplicates):
+
+```css
+img[src*="/customimages/<appid>_hero.jpg"],
+img[src*="/assets/<appid>/library_hero.jpg"]
+```
+
+## Remaining open questions
+
 - Only two games were checked (one custom, one default art). Hasn't been verified against other art states (e.g. an animated/video hero, if Steam supports one) or other Big Picture Mode screens (e.g. the store vs. library view, if they differ).
 
 ## Implication for the DOM Selectors setting
