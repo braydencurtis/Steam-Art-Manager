@@ -24,6 +24,23 @@ describe("compileLogoStyleTheme", () => {
     expect(css).toBe("");
   });
 
+  it("matches a SARM-managed custom logo, whose src uses an underscore rather than the default art's slash", () => {
+    // Confirmed via DevTools: a custom logo (set through SARM's normal grid
+    // management, independent of Logo Style Override) is served from
+    // "/customimages/<appid>_logo.png", not the "/<appid>/logo..." shape
+    // Steam's own default logo art uses - the old single-pattern selector
+    // never matched it, so none of position/shadow/size ever applied to a
+    // game with a custom logo set.
+    const overrides: Record<string, LogoStyleOverride> = {
+      "1462040": { position: { x: 100, y: 100 } },
+    };
+
+    const css = compileLogoStyleTheme(overrides, SELECTORS);
+
+    expect(css).toContain("img[src*=\"/customimages/1462040_logo\"]");
+    expect(css).toContain("img[src*=\"/1462040/logo\"]");
+  });
+
   it("omits any appid with no override entirely", () => {
     const overrides: Record<string, LogoStyleOverride> = {
       "570": {},
@@ -80,7 +97,8 @@ describe("compileLogoStyleTheme", () => {
 
     const css = compileLogoStyleTheme(overrides, SELECTORS);
 
-    expect(css).toContain("div[class*=\"OUTER_CLASS\"]:has(img[src*=\"/1091500/logo\"])");
+    expect(css).toContain("div[class*=\"OUTER_CLASS\"]:has(img[src*=\"/customimages/1091500_logo\"],");
+    expect(css).toContain("img[src*=\"/1091500/logo\"])");
     expect(css).toContain("left: 73% !important;");
     expect(css).toContain("top: 12% !important;");
     expect(css).toContain("transform: translate(-73%, -12%) !important;");
@@ -144,7 +162,8 @@ describe("compileLogoStyleTheme", () => {
 
     const css = compileLogoStyleTheme(overrides, SELECTORS);
 
-    expect(css).toContain("div[class*=\"OUTER_CLASS\"]:has(img[src*=\"/1462040/logo\"])");
+    expect(css).toContain("div[class*=\"OUTER_CLASS\"]:has(img[src*=\"/customimages/1462040_logo\"],");
+    expect(css).toContain("img[src*=\"/1462040/logo\"])");
     expect(css).toContain("filter: drop-shadow(0px 4px 30px rgba(0, 0, 0, 0.85)) drop-shadow(0px 2px 4px rgba(0, 0, 0, 0.6)) !important;");
     expect(css).toContain("left: 0% !important;");
     expect(css).toContain("top: 50% !important;");

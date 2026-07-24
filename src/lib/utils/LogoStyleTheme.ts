@@ -33,11 +33,25 @@ function buildHeroImageSelector(appid: string): string {
   ].join(",\n");
 }
 
+/**
+ * Builds the selector matching a game's logo image, across both art sources
+ * Steam can serve it from - Steam's own default logo art uses "/<appid>/logo"
+ * in its path, but a SARM-managed custom logo (set via the normal grid
+ * management feature, independent of Logo Style Override) is served from
+ * "/customimages/<appid>_logo" instead - an underscore, not the slash the
+ * default-art pattern relies on, so it never matched the old single-pattern
+ * selector. Confirmed via DevTools inspection of a game with a custom logo set.
+ * @param appid The game's Steam app ID.
+ */
+function buildLogoImageSelector(appid: string): string {
+  return [
+    `img[src*="/customimages/${appid}_logo"]`,
+    `img[src*="/${appid}/logo"]`,
+  ].join(",\n");
+}
+
 function compileGameRules(appid: string, override: LogoStyleOverride, domSelectors: LogoStyleDomSelectors): string {
-  // Steam serves other art (hero/background images, capsules, etc.) under the
-  // same "/<appid>/" URL prefix as the logo, just with a different filename -
-  // matching on the appid alone would also catch that unrelated art.
-  const imgSelector = `img[src*="/${appid}/logo"]`;
+  const imgSelector = buildLogoImageSelector(appid);
   const outerSelector = `div[class*="${domSelectors.outerBoxSelector}"]:has(${imgSelector})`;
 
   const blocks: string[] = [];
