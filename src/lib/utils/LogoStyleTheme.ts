@@ -1,5 +1,17 @@
 import type { LogoPositionOverride, LogoShadowStyle, LogoStyleDomSelectors, LogoStyleOverride } from "@types";
 
+/**
+ * Builds the CSS `filter` value for a shadow style - two stacked `drop-shadow()`
+ * layers. Offset and color are fixed regardless of input; only radius and opacity
+ * are ever configurable data.
+ * @param shadow The shadow style to build a filter value for.
+ */
+function buildShadowFilter(shadow: LogoShadowStyle): string {
+  const layer1 = `drop-shadow(0px 4px ${shadow.layer1.radius}px rgba(0, 0, 0, ${shadow.layer1.opacity}))`;
+  const layer2 = `drop-shadow(0px 2px ${shadow.layer2.radius}px rgba(0, 0, 0, ${shadow.layer2.opacity}))`;
+  return `${layer1} ${layer2}`;
+}
+
 function compileGameRules(appid: string, override: LogoStyleOverride, domSelectors: LogoStyleDomSelectors): string {
   // Steam serves other art (hero/background images, capsules, etc.) under the
   // same "/<appid>/" URL prefix as the logo, just with a different filename -
@@ -54,7 +66,7 @@ export function compileLogoStyleTheme(
 ): string {
   const root = [
     ":root {",
-    `  --logo-shadow: ${globalShadowStyle};`,
+    `  --logo-shadow: ${buildShadowFilter(globalShadowStyle)};`,
     "}",
   ].join("\n");
 

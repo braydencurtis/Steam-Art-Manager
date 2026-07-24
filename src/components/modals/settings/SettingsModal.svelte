@@ -5,7 +5,7 @@
   import { Button, IconButton } from "@interactables";
   import { APP_TYPES, GRID_IMAGE_SIZES } from "@models";
   import { activeUserId, appTypes, cacheSelectedGrids, debugMode, gridImageSize, loadingGames, logoStyleDomSelectors, logoStyleShadowStyle, logoStyleThemeCssPath, needsSGDBAPIKey, needsSteamKey, showInfoSnackbar, steamGridDBKey, steamInstallPath, steamKey, steamUsers } from "@stores/AppState";
-  import type { LogoStyleDomSelectors } from "@types";
+  import type { LogoShadowStyle, LogoStyleDomSelectors } from "@types";
   import { showSettingsModal } from "@stores/Modals";
   import { appLogDir } from "@tauri-apps/api/path";
   import * as shell from "@tauri-apps/plugin-shell";
@@ -17,6 +17,7 @@
   import DropdownEntry from "./DropdownEntry.svelte";
   import FilePathEntry from "./FilePathEntry.svelte";
   import FileSaveEntry from "./FileSaveEntry.svelte";
+  import SliderFieldEntry from "./SliderFieldEntry.svelte";
   import TextFieldEntry from "./TextFieldEntry.svelte";
   import ToggleFieldEntry from "./ToggleFieldEntry.svelte";
   
@@ -68,7 +69,7 @@
   let gridImageSizeSetting = $gridImageSize;
 
   let themeCssOutputPath = $logoStyleThemeCssPath;
-  let shadowStyleSetting = $logoStyleShadowStyle;
+  let shadowStyleSetting: LogoShadowStyle = { layer1: { ...$logoStyleShadowStyle.layer1 }, layer2: { ...$logoStyleShadowStyle.layer2 } };
   let domSelectorsSetting: LogoStyleDomSelectors = { ...$logoStyleDomSelectors };
 
   /**
@@ -106,7 +107,7 @@
 
     if (themeCssOutputPath !== $logoStyleThemeCssPath) $logoStyleThemeCssPath = themeCssOutputPath;
 
-    if (shadowStyleSetting !== $logoStyleShadowStyle) $logoStyleShadowStyle = shadowStyleSetting;
+    if (JSON.stringify(shadowStyleSetting) !== JSON.stringify($logoStyleShadowStyle)) $logoStyleShadowStyle = shadowStyleSetting;
 
     if (JSON.stringify(domSelectorsSetting) !== JSON.stringify($logoStyleDomSelectors)) $logoStyleDomSelectors = domSelectorsSetting;
 
@@ -133,7 +134,7 @@
     gridImageSizeSetting = $gridImageSize
 
     themeCssOutputPath = $logoStyleThemeCssPath;
-    shadowStyleSetting = $logoStyleShadowStyle;
+    shadowStyleSetting = { layer1: { ...$logoStyleShadowStyle.layer1 }, layer2: { ...$logoStyleShadowStyle.layer2 } };
     domSelectorsSetting = { ...$logoStyleDomSelectors };
 
     LogController.log("Reverted settings.");
@@ -209,11 +210,38 @@
   }
 
   /**
-   * Function to run on logo shadow style change.
+   * Function to run on shadow layer 1 radius change.
    * @param value The updated value.
    */
-  function onShadowStyleChange(value: string): void {
-    shadowStyleSetting = value;
+  function onShadowLayer1RadiusChange(value: number): void {
+    shadowStyleSetting = { ...shadowStyleSetting, layer1: { ...shadowStyleSetting.layer1, radius: value } };
+    canSave = true;
+  }
+
+  /**
+   * Function to run on shadow layer 1 opacity change.
+   * @param percent The updated value, as a 0-100 percent (converted to 0-1 for storage).
+   */
+  function onShadowLayer1OpacityChange(percent: number): void {
+    shadowStyleSetting = { ...shadowStyleSetting, layer1: { ...shadowStyleSetting.layer1, opacity: percent / 100 } };
+    canSave = true;
+  }
+
+  /**
+   * Function to run on shadow layer 2 radius change.
+   * @param value The updated value.
+   */
+  function onShadowLayer2RadiusChange(value: number): void {
+    shadowStyleSetting = { ...shadowStyleSetting, layer2: { ...shadowStyleSetting.layer2, radius: value } };
+    canSave = true;
+  }
+
+  /**
+   * Function to run on shadow layer 2 opacity change.
+   * @param percent The updated value, as a 0-100 percent (converted to 0-1 for storage).
+   */
+  function onShadowLayer2OpacityChange(percent: number): void {
+    shadowStyleSetting = { ...shadowStyleSetting, layer2: { ...shadowStyleSetting.layer2, opacity: percent / 100 } };
     canSave = true;
   }
 
@@ -352,13 +380,37 @@
           filters={[{ name: "CSS", extensions: ["css"] }]}
           onChange={onThemeCssOutputPathChange}
         />
-        <TextFieldEntry
-          label="Logo Shadow Style"
-          description={"The CSS <code>filter</code> value applied to every game with its Logo Style Override shadow toggle on."}
-          value={shadowStyleSetting}
-          canBeEmpty
-          placeholder={"drop-shadow(...)"}
-          onChange={onShadowStyleChange}
+        <SliderFieldEntry
+          label="Shadow Layer 1 Radius"
+          description={"The blur radius (in pixels) of the first shadow layer applied to every game with its Logo Style Override shadow toggle on."}
+          value={shadowStyleSetting.layer1.radius}
+          min={0}
+          max={60}
+          onChange={onShadowLayer1RadiusChange}
+        />
+        <SliderFieldEntry
+          label="Shadow Layer 1 Opacity"
+          description={"The opacity (as a percent) of the first shadow layer."}
+          value={Math.round(shadowStyleSetting.layer1.opacity * 100)}
+          min={0}
+          max={100}
+          onChange={onShadowLayer1OpacityChange}
+        />
+        <SliderFieldEntry
+          label="Shadow Layer 2 Radius"
+          description={"The blur radius (in pixels) of the second shadow layer applied to every game with its Logo Style Override shadow toggle on."}
+          value={shadowStyleSetting.layer2.radius}
+          min={0}
+          max={30}
+          onChange={onShadowLayer2RadiusChange}
+        />
+        <SliderFieldEntry
+          label="Shadow Layer 2 Opacity"
+          description={"The opacity (as a percent) of the second shadow layer."}
+          value={Math.round(shadowStyleSetting.layer2.opacity * 100)}
+          min={0}
+          max={100}
+          onChange={onShadowLayer2OpacityChange}
         />
         <TextFieldEntry
           label="Logo Outer Box Selector"

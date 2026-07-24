@@ -1,8 +1,11 @@
-import type { LogoStyleDomSelectors, LogoStyleOverride } from "@types";
+import type { LogoShadowStyle, LogoStyleDomSelectors, LogoStyleOverride } from "@types";
 import { describe, expect, it } from "vitest";
 import { compileLogoStyleTheme } from "./LogoStyleTheme";
 
-const SHADOW_STYLE = "drop-shadow(0px 4px 30px rgba(0, 0, 0, 0.85))";
+const SHADOW_STYLE: LogoShadowStyle = {
+  layer1: { radius: 30, opacity: 0.85 },
+  layer2: { radius: 4, opacity: 0.6 },
+};
 
 const SELECTORS: LogoStyleDomSelectors = {
   outerBoxSelector: "OUTER_CLASS",
@@ -10,11 +13,27 @@ const SELECTORS: LogoStyleDomSelectors = {
 };
 
 describe("compileLogoStyleTheme", () => {
-  it("always emits a :root block with the global shadow style", () => {
+  it("always emits a :root block with the global shadow style built from structured radius/opacity", () => {
     const css = compileLogoStyleTheme({}, SHADOW_STYLE, SELECTORS);
 
     expect(css).toContain(":root");
-    expect(css).toContain(`--logo-shadow: ${SHADOW_STYLE};`);
+    expect(css).toContain("--logo-shadow: drop-shadow(0px 4px 30px rgba(0, 0, 0, 0.85)) drop-shadow(0px 2px 4px rgba(0, 0, 0, 0.6));");
+  });
+
+  it("reflects radius/opacity inputs in the built filter, with offset and color always fixed regardless of input", () => {
+    const customShadow: LogoShadowStyle = {
+      layer1: { radius: 99, opacity: 0.12 },
+      layer2: { radius: 7, opacity: 0.34 },
+    };
+
+    const css = compileLogoStyleTheme({}, customShadow, SELECTORS);
+
+    // Radius/opacity flow through from input.
+    expect(css).toContain("99px rgba(0, 0, 0, 0.12)");
+    expect(css).toContain("7px rgba(0, 0, 0, 0.34)");
+    // Offset and color stay fixed regardless of input.
+    expect(css).toContain("drop-shadow(0px 4px 99px rgba(0, 0, 0, 0.12))");
+    expect(css).toContain("drop-shadow(0px 2px 7px rgba(0, 0, 0, 0.34))");
   });
 
   it("omits any appid with no override entirely", () => {

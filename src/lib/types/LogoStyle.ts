@@ -19,9 +19,23 @@ export type LogoStyleOverride = {
 };
 
 /**
- * The CSS `filter` value applied to every game with its shadow toggle on.
+ * One `drop-shadow()` layer's tunable parameters. Offset and color are not
+ * included here - they stay fixed at baked-in defaults (see `compileLogoStyleTheme`),
+ * only radius and opacity (0-1) are ever user-configurable.
  */
-export type LogoShadowStyle = string;
+export type LogoShadowLayer = {
+  radius: number,
+  opacity: number,
+};
+
+/**
+ * The shadow applied to every game with its shadow toggle on - two stacked
+ * `drop-shadow()` layers for visual depth.
+ */
+export type LogoShadowStyle = {
+  layer1: LogoShadowLayer,
+  layer2: LogoShadowLayer,
+};
 
 /**
  * The CSS class-name fragments used to target Steam's CEF-rendered logo elements.
@@ -42,4 +56,7 @@ export const DEFAULT_LOGO_STYLE_DOM_SELECTORS: LogoStyleDomSelectors = {
   innerWrapperSelector: "_2DVdg_N1qLNDdnxJqN-RBX",
 };
 
-export const DEFAULT_LOGO_SHADOW_STYLE: LogoShadowStyle = "drop-shadow(0px 4px 30px rgba(0, 0, 0, 0.85)) drop-shadow(0px 2px 4px rgba(0, 0, 0, 0.6))";
+export const DEFAULT_LOGO_SHADOW_STYLE: LogoShadowStyle = {
+  layer1: { radius: 30, opacity: 0.85 },
+  layer2: { radius: 4, opacity: 0.6 },
+};
