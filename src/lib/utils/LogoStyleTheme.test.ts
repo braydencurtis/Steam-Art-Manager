@@ -164,19 +164,18 @@ describe("compileLogoStyleTheme", () => {
     expect(css).toContain("object-position: 25% 50% !important;");
   });
 
-  it("does not match a game's blurred hero backdrop duplicates in its background rule", () => {
-    // Steam renders 2 extra blurred copies of the hero image alongside the sharp
-    // one for a backdrop effect - for Steam's default art these are <img> tags
-    // with "_blur" inserted before the extension (e.g. "library_hero_blur.jpg"),
-    // which must not match a selector meant only for the sharp "library_hero.jpg".
+  it("also slides the default-art blurred backdrop duplicate in sync with the sharp hero", () => {
+    // Steam renders 2 extra blurred copies of the hero image for a backdrop
+    // effect - for default art these are real <img> tags ("_blur" inserted
+    // before the extension), so the background rule matches them too, rather
+    // than leaving the blurred backdrop static while the sharp hero shifts.
     const overrides: Record<string, LogoStyleOverride> = {
       "620": { background: { x: 25 } },
     };
 
     const css = compileLogoStyleTheme(overrides, SELECTORS);
-    const backgroundSection = css.split("object-position")[0] ?? "";
 
-    expect(backgroundSection).not.toContain("_blur");
+    expect(css).toContain("img[src*=\"/assets/620/library_hero_blur.jpg\"]");
   });
 
   it("keeps a game's logo and background rules independent when both are set", () => {

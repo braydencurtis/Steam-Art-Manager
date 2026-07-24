@@ -49,19 +49,17 @@ Unlike the logo (always `/<appid>/logo...`, one consistent shape), the hero imag
 
 In both cases the sharp/main hero is the one plain `<img>` with no extra class beyond `HNbe3eZf6H7dtJ042x1vM`, and the blur duplicates carry an additional `HSQWw9HUAP6jtA2OZjS-u` class (a third, `_3_IUVzR9tpG_JKEjhwXEAb`, showed up on one duplicate in both cases too - likely a transition/crossfade state, not investigated further).
 
-**This resolves cleanly without needing the extra class as a discriminator**: scoping any selector to the `img` tag already excludes the canvas-based custom-art duplicates for free (canvas has no `src` to match against). For default art, the `_blur` duplicates need the match pattern to include the exact filename, not just a loose substring - `"library_hero_blur.jpg"` does **not** contain `"library_hero.jpg"` as a substring (the `_blur` sits between `hero` and `.jpg`), so:
+**Whether the blur duplicate should also get positioned is a real design question, not just a matching-precision one.** The blur duplicate isn't unrelated art the way a capsule/icon is for the logo - it's the same hero image, just blurred for an ambient backdrop. Leaving it unmatched means it stays static while the sharp hero shifts, which can look mismatched. Decision (see issue #14): include the blur duplicate in the background rule **where it's reachable**.
+
+That's only true for default art. Scoping to the `img` tag already excludes the canvas-based custom-art duplicates for free (canvas has no `src` to match against, and nothing else ties a given canvas to one specific game - there's no way to reach it with a CSS selector at all). For default art, the `_blur` duplicate is a real `<img>`, so it can be matched deliberately by including the exact `_blur.jpg` filename:
 
 ```css
-img[src*="/assets/<appid>/library_hero.jpg"]   /* default art - excludes the _blur.jpg duplicates */
-img[src*="/customimages/<appid>_hero.jpg"]     /* custom art - canvas duplicates already excluded by the img tag */
+img[src*="/customimages/<appid>_hero.jpg"],        /* custom art, sharp only - canvas blur duplicates unreachable */
+img[src*="/assets/<appid>/library_hero.jpg"],      /* default art, sharp */
+img[src*="/assets/<appid>/library_hero_blur.jpg"]  /* default art, blur backdrop - moved in sync with the sharp image */
 ```
 
-Revised draft selector (superseding the looser one above, which would have incorrectly also matched the default-art blur duplicates):
-
-```css
-img[src*="/customimages/<appid>_hero.jpg"],
-img[src*="/assets/<appid>/library_hero.jpg"]
-```
+This means custom-art games (the primary use case - a user is actively theming that game) only get the sharp hero repositioned, while default-art games get both. An accepted, asymmetric tradeoff given the canvas limitation, not an oversight.
 
 ## Remaining open questions
 

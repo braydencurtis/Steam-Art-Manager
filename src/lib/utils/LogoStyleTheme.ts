@@ -13,20 +13,23 @@ function buildShadowFilter(shadow: LogoShadowStyle): string {
 }
 
 /**
- * Builds the selector matching a game's sharp/main hero image, across both art
- * sources Steam can serve it from. Deliberately excludes the blurred backdrop
- * duplicates Steam renders alongside it - those share the same "/<appid>/..."
- * path prefix but not the exact filename ("_blur" is inserted before ".jpg"
- * for default art; custom art's duplicates are <canvas> elements with no `src`
- * at all, already excluded by scoping to `img`). See
- * docs/hero-background-dom-investigation.md for the DevTools findings this is
- * based on.
+ * Builds the selector matching a game's hero image, across both art sources
+ * Steam can serve it from - including the blurred backdrop duplicate Steam
+ * renders alongside it, so the blur shifts in sync with the sharp image
+ * instead of staying static. Only reachable for default Steam art, where the
+ * blur duplicate is a real `<img>` with "_blur" inserted before ".jpg" - for
+ * custom (SARM-managed) art the blur duplicates are `<canvas>` elements with
+ * no `src` at all, and nothing else ties a given canvas to a specific game, so
+ * there's no way to target one game's canvas duplicate with a CSS selector.
+ * See docs/hero-background-dom-investigation.md for the DevTools findings
+ * this is based on.
  * @param appid The game's Steam app ID.
  */
 function buildHeroImageSelector(appid: string): string {
   return [
     `img[src*="/customimages/${appid}_hero.jpg"]`,
     `img[src*="/assets/${appid}/library_hero.jpg"]`,
+    `img[src*="/assets/${appid}/library_hero_blur.jpg"]`,
   ].join(",\n");
 }
 
