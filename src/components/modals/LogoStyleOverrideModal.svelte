@@ -89,7 +89,13 @@
 
   const existingOverride = $logoStyleOverrides[$selectedGameAppId];
 
-  const originalShadow = existingOverride?.shadow;
+  // A saved override from before shadow became structured data has `shadow` as
+  // a boolean, not a LogoShadowStyle object - normalize that to "no shadow"
+  // rather than reading `.layer1`/`.layer2` off a boolean (optional chaining
+  // doesn't short-circuit on `false`, only on null/undefined, so `false?.layer1`
+  // evaluates to `undefined` and the next `.radius` access below would throw).
+  const existingShadow = existingOverride?.shadow;
+  const originalShadow = typeof existingShadow === "object" ? existingShadow : undefined;
   const originalHasShadow = !!originalShadow;
   const originalHasPosition = !!existingOverride?.position;
   const originalX = existingOverride?.position?.x ?? 50;
