@@ -40,17 +40,18 @@ describe("compileLogoStyleTheme", () => {
     expect(css).not.toContain("div[class*=\"OUTER_CLASS\"]:has(img[src*=\"/2909400/logo\"])");
   });
 
-  it("emits a position-only rule for a game with a position but no shadow", () => {
+  it("emits a position-only rule for a game with a position but no shadow, using exact x/y values", () => {
     const overrides: Record<string, LogoStyleOverride> = {
-      "1091500": { shadow: false, position: { anchor: "TopLeft", offsetX: 0, offsetY: 0 } },
+      "1091500": { shadow: false, position: { x: 73, y: 12 } },
     };
 
     const css = compileLogoStyleTheme(overrides, SHADOW_STYLE, SELECTORS);
 
     expect(css).toContain("div[class*=\"OUTER_CLASS\"]:has(img[src*=\"/1091500/logo\"])");
-    expect(css).toContain("div[class*=\"INNER_CLASS\"]");
-    expect(css).toContain("top: 0% !important;");
-    expect(css).toContain("left: 0% !important;");
+    expect(css).toContain("left: 73% !important;");
+    expect(css).toContain("top: 12% !important;");
+    expect(css).toContain("transform: translate(-73%, -12%) !important;");
+    expect(css).toContain("object-position: 73% 12% !important;");
     // No shadow was requested for this game.
     const gameSection = css.split("img[src*=\"/1091500/logo\"]")[2] ?? "";
     expect(gameSection).not.toContain("filter: var(--logo-shadow)");
@@ -58,52 +59,64 @@ describe("compileLogoStyleTheme", () => {
 
   it("emits both position and shadow rules for a game with both set", () => {
     const overrides: Record<string, LogoStyleOverride> = {
-      "1462040": { shadow: true, position: { anchor: "CenterLeft", offsetX: 12, offsetY: -40 } },
+      "1462040": { shadow: true, position: { x: 0, y: 50 } },
     };
 
     const css = compileLogoStyleTheme(overrides, SHADOW_STYLE, SELECTORS);
 
     expect(css).toContain("div[class*=\"OUTER_CLASS\"]:has(img[src*=\"/1462040/logo\"])");
     expect(css).toContain("filter: var(--logo-shadow) !important;");
-    expect(css).toContain("top: 50% !important;");
     expect(css).toContain("left: 0% !important;");
-    expect(css).toContain("translate(0%, -50%) translate(12px, -40px)");
-  });
-
-  it("applies an unconstrained pixel offset even without a centered anchor", () => {
-    const overrides: Record<string, LogoStyleOverride> = {
-      "1": { shadow: false, position: { anchor: "TopLeft", offsetX: 400, offsetY: 250 } },
-    };
-
-    const css = compileLogoStyleTheme(overrides, SHADOW_STYLE, SELECTORS);
-
-    expect(css).toContain("transform: translate(400px, 250px) !important;");
+    expect(css).toContain("top: 50% !important;");
+    expect(css).toContain("transform: translate(0%, -50%) !important;");
   });
 
   it("handles multiple games independently in one output", () => {
     const overrides: Record<string, LogoStyleOverride> = {
       "570": { shadow: true },
-      "1091500": { shadow: false, position: { anchor: "BottomRight", offsetX: 0, offsetY: 0 } },
+      "1091500": { shadow: false, position: { x: 100, y: 100 } },
     };
 
     const css = compileLogoStyleTheme(overrides, SHADOW_STYLE, SELECTORS);
 
     expect(css).toContain("img[src*=\"/570/logo\"]");
     expect(css).toContain("img[src*=\"/1091500/logo\"]");
-    expect(css).toContain("bottom: 0% !important;");
-    expect(css).toContain("right: 0% !important;");
+    expect(css).toContain("left: 100% !important;");
+    expect(css).toContain("top: 100% !important;");
   });
 
-  it("uses object-position and flex alignment matching each axis of the anchor", () => {
+  it("never emits inner-wrapper flex-alignment CSS anywhere in the output", () => {
     const overrides: Record<string, LogoStyleOverride> = {
-      "42": { shadow: false, position: { anchor: "BottomCenter", offsetX: 0, offsetY: 0 } },
+      "42": { shadow: true, position: { x: 50, y: 50 } },
     };
 
     const css = compileLogoStyleTheme(overrides, SHADOW_STYLE, SELECTORS);
 
-    expect(css).toContain("object-position: center bottom !important;");
-    expect(css).toContain("align-items: flex-end !important;");
-    expect(css).toContain("justify-content: center !important;");
+    expect(css).not.toContain("INNER_CLASS");
+    expect(css).not.toContain("align-items");
+    expect(css).not.toContain("justify-content");
+    expect(css).not.toContain("display: flex");
+  });
+
+  it("reproduces every old 9-point anchor position as an x/y special case", () => {
+    const corners = [
+      { x: 0, y: 0 }, { x: 50, y: 0 }, { x: 100, y: 0 },
+      { x: 0, y: 50 }, { x: 50, y: 50 }, { x: 100, y: 50 },
+      { x: 0, y: 100 }, { x: 50, y: 100 }, { x: 100, y: 100 },
+    ];
+
+    for (const { x, y } of corners) {
+      const overrides: Record<string, LogoStyleOverride> = {
+        "1": { shadow: false, position: { x, y } },
+      };
+
+      const css = compileLogoStyleTheme(overrides, SHADOW_STYLE, SELECTORS);
+
+      expect(css).toContain(`left: ${x}% !important;`);
+      expect(css).toContain(`top: ${y}% !important;`);
+      expect(css).not.toContain("right:");
+      expect(css).not.toContain("bottom:");
+    }
   });
 
   it("does not match a non-logo image sharing the same appid prefix, like a hero background", () => {
@@ -113,13 +126,11 @@ describe("compileLogoStyleTheme", () => {
     // Every selector must require "logo" in the filename, or a positioning/shadow
     // rule meant for the logo will also apply to unrelated art for the same game.
     const overrides: Record<string, LogoStyleOverride> = {
-      "1675830": { shadow: true, position: { anchor: "TopRight", offsetX: 0, offsetY: 0 } },
+      "1675830": { shadow: true, position: { x: 100, y: 0 } },
     };
 
     const css = compileLogoStyleTheme(overrides, SHADOW_STYLE, SELECTORS);
 
-    expect(css).not.toContain("img[src*=\"/1675830/\"]:not([src*=\"logo\"])");
-    // Every occurrence of the appid-scoped selector must be logo-specific.
     const matches = css.match(/img\[src\*="\/1675830\/[^"]*"\]/g) ?? [];
     expect(matches.length).toBeGreaterThan(0);
     for (const match of matches) {

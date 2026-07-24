@@ -5,7 +5,7 @@
   import { logoStyleDomSelectors, logoStyleOverrides, logoStyleShadowStyle, logoStyleThemeCssPath, manualSteamGames, nonSteamGames, selectedGameAppId, steamGames, steamLogoPositions } from "@stores/AppState";
   import { showLogoStyleOverrideModal } from "@stores/Modals";
   import { writeTextFile } from "@tauri-apps/plugin-fs";
-  import type { AnchorPosition, LogoStyleOverride } from "@types";
+  import type { LogoStyleOverride } from "@types";
   import { compileLogoStyleTheme, debounce } from "@utils";
   import { get } from "svelte/store";
   import ModalBody from "./modal-utils/ModalBody.svelte";
@@ -35,9 +35,9 @@
     const overrides = { ...get(logoStyleOverrides) };
 
     if (shadow || hasPosition) {
-      // NumberInput binds via a type="text" input, so offsetX/offsetY come back
+      // NumberInput binds via a type="text" input, so x/y come back
       // as strings at runtime despite their declared type - coerce explicitly.
-      overrides[$selectedGameAppId] = hasPosition ? { shadow, position: { anchor, offsetX: Number(offsetX), offsetY: Number(offsetY) } } : { shadow };
+      overrides[$selectedGameAppId] = hasPosition ? { shadow, position: { x: Number(x), y: Number(y) } } : { shadow };
     } else {
       delete overrides[$selectedGameAppId];
     }
@@ -57,17 +57,33 @@
     writeThemeCssPreview(get(logoStyleOverrides));
   }
 
-  const anchors: AnchorPosition[] = [
-    "TopLeft", "TopCenter", "TopRight",
-    "CenterLeft", "CenterCenter", "CenterRight",
-    "BottomLeft", "BottomCenter", "BottomRight",
+  // Anchor presets are a UI-only convenience - picking one just sets x/y below,
+  // nothing about "which anchor was picked" is stored or persisted.
+  // TODO Replaced by preset buttons + paired slider/number controls in issue #11.
+  const anchorPresets: { label: string, data: string, x: number, y: number }[] = [
+    { label: "Top Left", data: "TopLeft", x: 0, y: 0 },
+    { label: "Top Center", data: "TopCenter", x: 50, y: 0 },
+    { label: "Top Right", data: "TopRight", x: 100, y: 0 },
+    { label: "Center Left", data: "CenterLeft", x: 0, y: 50 },
+    { label: "Center Center", data: "CenterCenter", x: 50, y: 50 },
+    { label: "Center Right", data: "CenterRight", x: 100, y: 50 },
+    { label: "Bottom Left", data: "BottomLeft", x: 0, y: 100 },
+    { label: "Bottom Center", data: "BottomCenter", x: 50, y: 100 },
+    { label: "Bottom Right", data: "BottomRight", x: 100, y: 100 },
   ];
-  const anchorOptions = anchors.map((anchorPos: AnchorPosition) => {
-    return {
-      label: anchorPos.split(/(?=[A-Z])/).join(" "),
-      data: anchorPos
+  const anchorOptions = anchorPresets.map(({ label, data }) => ({ label, data }));
+
+  /**
+   * Applies the chosen anchor preset's x/y values.
+   * @param presetKey The selected preset's key.
+   */
+  function applyAnchorPreset(presetKey: string): void {
+    const preset = anchorPresets.find((p) => p.data === presetKey);
+    if (preset) {
+      x = preset.x;
+      y = preset.y;
     }
-  });
+  }
 
   $: games = [ ...$steamGames, ...$manualSteamGames, ...$nonSteamGames ];
   $: game = games.find((game) => game.appid.toString() === $selectedGameAppId)!;
@@ -78,34 +94,32 @@
 
   const originalShadow = existingOverride?.shadow ?? false;
   const originalHasPosition = !!existingOverride?.position;
-  const originalAnchor: AnchorPosition = existingOverride?.position?.anchor ?? "CenterCenter";
-  const originalOffsetX = existingOverride?.position?.offsetX ?? 0;
-  const originalOffsetY = existingOverride?.position?.offsetY ?? 0;
+  const originalX = existingOverride?.position?.x ?? 50;
+  const originalY = existingOverride?.position?.y ?? 50;
 
   let shadow = originalShadow;
   let hasPosition = originalHasPosition;
-  let anchor = originalAnchor;
-  let offsetX = originalOffsetX;
-  let offsetY = originalOffsetY;
+  let x = originalX;
+  let y = originalY;
 
   $: canClear = !!existingOverride;
   $: canSave = shadow !== originalShadow
     || hasPosition !== originalHasPosition
-    || (hasPosition && (anchor !== originalAnchor || offsetX !== originalOffsetX || offsetY !== originalOffsetY));
+    || (hasPosition && (Number(x) !== originalX || Number(y) !== originalY));
 
   $: hasNativeLogoPosition = $steamLogoPositions[$selectedGameAppId]?.logoPosition.pinnedPosition !== undefined
     && $steamLogoPositions[$selectedGameAppId]?.logoPosition.pinnedPosition !== "REMOVE";
 
-  $: { shadow; hasPosition; anchor; offsetX; offsetY; debouncedLiveWrite(); }
+  $: { shadow; hasPosition; x; y; debouncedLiveWrite(); }
 
   /**
    * Apply the Logo Style Override changes.
    */
   function applyChanges(): void {
-    // NumberInput binds via a type="text" input, so offsetX/offsetY come back
+    // NumberInput binds via a type="text" input, so x/y come back
     // as strings at runtime despite their declared type - coerce explicitly.
     const override: LogoStyleOverride = hasPosition
-      ? { shadow, position: { anchor, offsetX: Number(offsetX), offsetY: Number(offsetY) } }
+      ? { shadow, position: { x: Number(x), y: Number(y) } }
       : { shadow };
 
     AppController.setLogoStyleOverride($selectedGameAppId, override);
@@ -134,10 +148,10 @@
       <Toggle label="Custom Position" bind:value={hasPosition} />
       {#if hasPosition}
         <div class="anchor">
-          <DropDown label="Anchor" options={anchorOptions} bind:value={anchor} width="8.75rem" direction="UP" />
+          <DropDown label="Preset" options={anchorOptions} value="" onChange={applyAnchorPreset} width="8.75rem" direction="UP" />
         </div>
-        <NumberInput label="X Offset" bind:value={offsetX} />
-        <NumberInput label="Y Offset" bind:value={offsetY} />
+        <NumberInput label="X" bind:value={x} />
+        <NumberInput label="Y" bind:value={y} />
       {/if}
     </div>
     <div class="buttons">

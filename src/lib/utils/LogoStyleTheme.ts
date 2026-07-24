@@ -1,57 +1,4 @@
-import type { AnchorPosition, LogoShadowStyle, LogoStyleDomSelectors, LogoStyleOverride } from "@types";
-
-type AxisAnchor = {
-  vertical: "Top" | "Center" | "Bottom",
-  horizontal: "Left" | "Center" | "Right",
-};
-
-function parseAnchor(anchor: AnchorPosition): AxisAnchor {
-  const [vertical, horizontal] = anchor.match(/^(Top|Center|Bottom)(Left|Center|Right)$/)!.slice(1) as [AxisAnchor["vertical"], AxisAnchor["horizontal"]];
-  return { vertical, horizontal };
-}
-
-function buildPositionProps({ vertical, horizontal }: AxisAnchor): string[] {
-  const props: string[] = [];
-
-  if (vertical === "Top") props.push("top: 0% !important;");
-  else if (vertical === "Center") props.push("top: 50% !important;");
-  else props.push("bottom: 0% !important;");
-
-  if (horizontal === "Left") props.push("left: 0% !important;");
-  else if (horizontal === "Center") props.push("left: 50% !important;");
-  else props.push("right: 0% !important;");
-
-  return props;
-}
-
-function buildTransform({ vertical, horizontal }: AxisAnchor, offsetX: number, offsetY: number): string {
-  const parts: string[] = [];
-
-  if (vertical === "Center" || horizontal === "Center") {
-    const x = horizontal === "Center" ? "-50%" : "0%";
-    const y = vertical === "Center" ? "-50%" : "0%";
-    parts.push(`translate(${x}, ${y})`);
-  }
-
-  if (offsetX !== 0 || offsetY !== 0) {
-    parts.push(`translate(${offsetX}px, ${offsetY}px)`);
-  }
-
-  return parts.length > 0 ? parts.join(" ") : "none";
-}
-
-function buildObjectPosition({ vertical, horizontal }: AxisAnchor): string {
-  const x = horizontal === "Left" ? "left" : horizontal === "Center" ? "center" : "right";
-  const y = vertical === "Top" ? "top" : vertical === "Center" ? "center" : "bottom";
-  return `${x} ${y}`;
-}
-
-function buildFlexAlign({ vertical, horizontal }: AxisAnchor): { alignItems: string, justifyContent: string } {
-  return {
-    alignItems: vertical === "Top" ? "flex-start" : vertical === "Center" ? "center" : "flex-end",
-    justifyContent: horizontal === "Left" ? "flex-start" : horizontal === "Center" ? "center" : "flex-end",
-  };
-}
+import type { LogoPositionOverride, LogoShadowStyle, LogoStyleDomSelectors, LogoStyleOverride } from "@types";
 
 function compileGameRules(appid: string, override: LogoStyleOverride, domSelectors: LogoStyleDomSelectors): string {
   // Steam serves other art (hero/background images, capsules, etc.) under the
@@ -59,35 +6,26 @@ function compileGameRules(appid: string, override: LogoStyleOverride, domSelecto
   // matching on the appid alone would also catch that unrelated art.
   const imgSelector = `img[src*="/${appid}/logo"]`;
   const outerSelector = `div[class*="${domSelectors.outerBoxSelector}"]:has(${imgSelector})`;
-  const innerSelector = `${outerSelector} > div[class*="${domSelectors.innerWrapperSelector}"]`;
 
   const blocks: string[] = [];
   const imgProps: string[] = [];
 
   if (override.position) {
-    const axis = parseAnchor(override.position.anchor);
-    const { alignItems, justifyContent } = buildFlexAlign(axis);
+    const { x, y }: LogoPositionOverride = override.position;
+    const negX = x === 0 ? "0" : `-${x}`;
+    const negY = y === 0 ? "0" : `-${y}`;
 
     blocks.push([
       `${outerSelector} {`,
-      ...buildPositionProps(axis).map((line) => `  ${line}`),
-      "  margin: 0 !important;",
-      "  padding: 0 !important;",
-      `  transform: ${buildTransform(axis, override.position.offsetX, override.position.offsetY)} !important;`,
-      "}",
-    ].join("\n"));
-
-    blocks.push([
-      `${innerSelector} {`,
-      "  display: flex !important;",
-      `  align-items: ${alignItems} !important;`,
-      `  justify-content: ${justifyContent} !important;`,
+      `  left: ${x}% !important;`,
+      `  top: ${y}% !important;`,
+      `  transform: translate(${negX}%, ${negY}%) !important;`,
       "  margin: 0 !important;",
       "  padding: 0 !important;",
       "}",
     ].join("\n"));
 
-    imgProps.push(`  object-position: ${buildObjectPosition(axis)} !important;`, "  margin: 0 !important;");
+    imgProps.push(`  object-position: ${x}% ${y}% !important;`, "  margin: 0 !important;");
   }
 
   if (override.shadow) {

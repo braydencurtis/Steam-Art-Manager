@@ -1,20 +1,12 @@
 /**
- * The 9-point grid a Logo Style Override's position is anchored to.
- * Deliberately separate from Steam's native `LogoPinPositions` (see ADR-0001) -
- * this vocabulary is not meant to be merged with it.
- */
-export type AnchorPosition =
-  | "TopLeft" | "TopCenter" | "TopRight"
-  | "CenterLeft" | "CenterCenter" | "CenterRight"
-  | "BottomLeft" | "BottomCenter" | "BottomRight";
-
-/**
- * An anchor plus an unconstrained pixel nudge from that anchor.
+ * A logo's position, as a continuous percentage (0-100) of Steam's logo bounding
+ * box along each axis - e.g. x:0 is flush left, x:100 is flush right, x:50 is
+ * centered. Deliberately separate from Steam's native `LogoPinPositions` (see
+ * ADR-0001) - this vocabulary is not meant to be merged with it.
  */
 export type LogoPositionOverride = {
-  anchor: AnchorPosition,
-  offsetX: number,
-  offsetY: number,
+  x: number,
+  y: number,
 };
 
 /**
