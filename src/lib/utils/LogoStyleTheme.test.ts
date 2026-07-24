@@ -152,14 +152,44 @@ describe("compileLogoStyleTheme", () => {
     }
   });
 
-  it("emits no CSS for a game with only a background override set (no CSS generation yet - plumbing only)", () => {
+  it("emits a background rule for a game with a background X override, matching both art sources", () => {
     const overrides: Record<string, LogoStyleOverride> = {
       "620": { background: { x: 25 } },
     };
 
     const css = compileLogoStyleTheme(overrides, SELECTORS);
 
-    expect(css).not.toContain("/620/");
+    expect(css).toContain("img[src*=\"/customimages/620_hero.jpg\"]");
+    expect(css).toContain("img[src*=\"/assets/620/library_hero.jpg\"]");
+    expect(css).toContain("object-position: 25% 50% !important;");
+  });
+
+  it("does not match a game's blurred hero backdrop duplicates in its background rule", () => {
+    // Steam renders 2 extra blurred copies of the hero image alongside the sharp
+    // one for a backdrop effect - for Steam's default art these are <img> tags
+    // with "_blur" inserted before the extension (e.g. "library_hero_blur.jpg"),
+    // which must not match a selector meant only for the sharp "library_hero.jpg".
+    const overrides: Record<string, LogoStyleOverride> = {
+      "620": { background: { x: 25 } },
+    };
+
+    const css = compileLogoStyleTheme(overrides, SELECTORS);
+    const backgroundSection = css.split("object-position")[0] ?? "";
+
+    expect(backgroundSection).not.toContain("_blur");
+  });
+
+  it("keeps a game's logo and background rules independent when both are set", () => {
+    const overrides: Record<string, LogoStyleOverride> = {
+      "620": { position: { x: 0, y: 0 }, background: { x: 80 } },
+    };
+
+    const css = compileLogoStyleTheme(overrides, SELECTORS);
+
+    expect(css).toContain("img[src*=\"/620/logo\"]");
+    expect(css).toContain("img[src*=\"/customimages/620_hero.jpg\"]");
+    expect(css).toContain("object-position: 0% 0% !important;");
+    expect(css).toContain("object-position: 80% 50% !important;");
   });
 
   it("does not match a non-logo image sharing the same appid prefix, like a hero background", () => {

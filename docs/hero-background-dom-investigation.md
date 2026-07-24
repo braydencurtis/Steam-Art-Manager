@@ -69,4 +69,6 @@ img[src*="/assets/<appid>/library_hero.jpg"]
 
 ## Implication for the DOM Selectors setting
 
-Per ADR-0002, these should be added as new user-editable settings (mirroring `outerBoxSelector`/`innerWrapperSelector`), likely as something like `heroOuterBoxSelector`/`heroImageClassSelector`, since Steam's bundler regenerates these hashes on client updates just like the logo's.
+**Superseded by the final selector design above.** This section originally speculated that the outer container/image classes (`QlR9EFwTdUNm_J5vx54_Z`/`HNbe3eZf6H7dtJ042x1vM`) would need new user-editable settings, mirroring the logo's `outerBoxSelector`/`innerWrapperSelector`, per ADR-0002.
+
+That turned out not to apply: the revised selector (issue #14) doesn't use either class at all. Background positioning only needs `object-position` on the image itself - unlike the logo, there's no outer box to reposition, so there's no reason to touch a class-based selector in the first place. The final selector is built purely from `/customimages/`, `/assets/`, and `library_hero.jpg` - stable, semantic URL/filename conventions, not the bundler-regenerated hashed class names ADR-0002 is actually about (see its rationale: "Steam's Big Picture UI is built with a bundler that regenerates **hashed class names**..."). This is the same category of thing already hardcoded for the logo's own `/logo` filename requirement, which was never made user-editable either. No new DOM Selector settings were added for background positioning.

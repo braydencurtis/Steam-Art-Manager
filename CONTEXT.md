@@ -19,7 +19,7 @@ A logo's placement within its bounding box, as continuous X/Y percentages (0-100
 _Avoid_: Anchor, Offset (superseded — see issue #7/#8)
 
 **Background Position**:
-A background/hero image's horizontal placement, as a continuous X percentage (0-100). X-only for now (issue #12); no CSS is generated for it yet (issue #14).
+A background/hero image's horizontal placement, as a continuous X percentage (0-100), applied via `object-position`. X-only for now (issue #12).
 
 ### Theme output
 

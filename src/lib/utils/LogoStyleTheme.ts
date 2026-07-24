@@ -12,6 +12,24 @@ function buildShadowFilter(shadow: LogoShadowStyle): string {
   return `${layer1} ${layer2}`;
 }
 
+/**
+ * Builds the selector matching a game's sharp/main hero image, across both art
+ * sources Steam can serve it from. Deliberately excludes the blurred backdrop
+ * duplicates Steam renders alongside it - those share the same "/<appid>/..."
+ * path prefix but not the exact filename ("_blur" is inserted before ".jpg"
+ * for default art; custom art's duplicates are <canvas> elements with no `src`
+ * at all, already excluded by scoping to `img`). See
+ * docs/hero-background-dom-investigation.md for the DevTools findings this is
+ * based on.
+ * @param appid The game's Steam app ID.
+ */
+function buildHeroImageSelector(appid: string): string {
+  return [
+    `img[src*="/customimages/${appid}_hero.jpg"]`,
+    `img[src*="/assets/${appid}/library_hero.jpg"]`,
+  ].join(",\n");
+}
+
 function compileGameRules(appid: string, override: LogoStyleOverride, domSelectors: LogoStyleDomSelectors): string {
   // Steam serves other art (hero/background images, capsules, etc.) under the
   // same "/<appid>/" URL prefix as the logo, just with a different filename -
@@ -48,6 +66,14 @@ function compileGameRules(appid: string, override: LogoStyleOverride, domSelecto
     blocks.push([`${imgSelector} {`, ...imgProps, "}"].join("\n"));
   }
 
+  if (override.background) {
+    blocks.push([
+      `${buildHeroImageSelector(appid)} {`,
+      `  object-position: ${override.background.x}% 50% !important;`,
+      "}",
+    ].join("\n"));
+  }
+
   return blocks.join("\n\n");
 }
 
@@ -65,7 +91,7 @@ export function compileLogoStyleTheme(
   domSelectors: LogoStyleDomSelectors
 ): string {
   const gameBlocks = Object.entries(overrides)
-    .filter(([, override]) => override.shadow || override.position)
+    .filter(([, override]) => override.shadow || override.position || override.background)
     .map(([appid, override]) => compileGameRules(appid, override, domSelectors))
     .filter((block) => block.length > 0);
 
