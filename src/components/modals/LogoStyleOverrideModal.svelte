@@ -34,8 +34,12 @@
   function liveOverrides(): Record<string, LogoStyleOverride> {
     const overrides = { ...get(logoStyleOverrides) };
 
-    if (shadow || hasPosition) {
-      overrides[$selectedGameAppId] = hasPosition ? { shadow, position: { x, y } } : { shadow };
+    if (shadow || hasPosition || hasBackground) {
+      overrides[$selectedGameAppId] = {
+        shadow,
+        ...(hasPosition ? { position: { x, y } } : {}),
+        ...(hasBackground ? { background: { x: backgroundX } } : {}),
+      };
     } else {
       delete overrides[$selectedGameAppId];
     }
@@ -89,29 +93,37 @@
   const originalHasPosition = !!existingOverride?.position;
   const originalX = existingOverride?.position?.x ?? 50;
   const originalY = existingOverride?.position?.y ?? 50;
+  const originalHasBackground = !!existingOverride?.background;
+  const originalBackgroundX = existingOverride?.background?.x ?? 50;
 
   let shadow = originalShadow;
   let hasPosition = originalHasPosition;
   let x = originalX;
   let y = originalY;
+  let hasBackground = originalHasBackground;
+  let backgroundX = originalBackgroundX;
 
   $: canClear = !!existingOverride;
   $: canSave = shadow !== originalShadow
     || hasPosition !== originalHasPosition
-    || (hasPosition && (x !== originalX || y !== originalY));
+    || (hasPosition && (x !== originalX || y !== originalY))
+    || hasBackground !== originalHasBackground
+    || (hasBackground && backgroundX !== originalBackgroundX);
 
   $: hasNativeLogoPosition = $steamLogoPositions[$selectedGameAppId]?.logoPosition.pinnedPosition !== undefined
     && $steamLogoPositions[$selectedGameAppId]?.logoPosition.pinnedPosition !== "REMOVE";
 
-  $: { shadow; hasPosition; x; y; debouncedLiveWrite(); }
+  $: { shadow; hasPosition; x; y; hasBackground; backgroundX; debouncedLiveWrite(); }
 
   /**
    * Apply the Logo Style Override changes.
    */
   function applyChanges(): void {
-    const override: LogoStyleOverride = hasPosition
-      ? { shadow, position: { x, y } }
-      : { shadow };
+    const override: LogoStyleOverride = {
+      shadow,
+      ...(hasPosition ? { position: { x, y } } : {}),
+      ...(hasBackground ? { background: { x: backgroundX } } : {}),
+    };
 
     AppController.setLogoStyleOverride($selectedGameAppId, override);
     onClose();
@@ -135,6 +147,14 @@
       else y = value;
     };
   }
+
+  /**
+   * Handles a change from the background PercentSlider.
+   * @param value The new background X value.
+   */
+  function onBackgroundXChange(value: number): void {
+    backgroundX = value;
+  }
 </script>
 
 <ModalBody title={`Set Logo Style for ${game?.name}`} open={open} on:close={() => open = false} on:closeEnd={onClose}>
@@ -148,6 +168,7 @@
     <div class="interactables">
       <Toggle label="Shadow" bind:value={shadow} />
       <Toggle label="Custom Position" bind:value={hasPosition} />
+      <Toggle label="Background Position" bind:value={hasBackground} />
     </div>
     {#if hasPosition}
       <div class="position-section">
@@ -160,6 +181,11 @@
           <PercentSlider label="X" value={x} onChange={onPositionChange("x")} />
           <PercentSlider label="Y" value={y} onChange={onPositionChange("y")} />
         </div>
+      </div>
+    {/if}
+    {#if hasBackground}
+      <div class="background-section">
+        <PercentSlider label="Background X" value={backgroundX} onChange={onBackgroundXChange} />
       </div>
     {/if}
     <div class="buttons">
@@ -230,6 +256,11 @@
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
+  }
+
+  .background-section {
+    width: calc(100% - 1.25rem);
+    padding: 0rem 0.625rem;
   }
 
   .buttons {

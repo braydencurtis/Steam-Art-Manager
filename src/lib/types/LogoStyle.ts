@@ -10,12 +10,21 @@ export type LogoPositionOverride = {
 };
 
 /**
- * A per-game Logo Style Override. Shadow and position are independent -
- * either, both, or (when absent from the overrides map) neither can be set for a game.
+ * A background/hero image's horizontal position, as a continuous percentage (0-100).
+ * X-only for now, per issue #12 - a Y axis may be added later if needed.
+ */
+export type LogoBackgroundOverride = {
+  x: number,
+};
+
+/**
+ * A per-game Logo Style Override. Shadow, position, and background are independent -
+ * any combination, or (when absent from the overrides map) none, can be set for a game.
  */
 export type LogoStyleOverride = {
   shadow: boolean,
   position?: LogoPositionOverride,
+  background?: LogoBackgroundOverride,
 };
 
 /**

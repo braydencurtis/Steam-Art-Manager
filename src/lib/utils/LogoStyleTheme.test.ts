@@ -138,6 +138,16 @@ describe("compileLogoStyleTheme", () => {
     }
   });
 
+  it("emits no CSS for a game with only a background override set (no CSS generation yet - plumbing only)", () => {
+    const overrides: Record<string, LogoStyleOverride> = {
+      "620": { shadow: false, background: { x: 25 } },
+    };
+
+    const css = compileLogoStyleTheme(overrides, SHADOW_STYLE, SELECTORS);
+
+    expect(css).not.toContain("/620/");
+  });
+
   it("does not match a non-logo image sharing the same appid prefix, like a hero background", () => {
     // Steam serves other art (e.g. hero/background images) under the same
     // "/<appid>/" URL prefix as the logo, just with a different filename -
