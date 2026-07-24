@@ -22,6 +22,7 @@ import { RequestError, SGDB } from "@models";
 import { appLibraryCache, canSave, dbFilters, dowloadingGridId, gridType, manualSteamGames, nonSteamGames, Platforms, requestTimeoutLength, showErrorSnackbar, showInfoSnackbar, steamGames, steamGridDBKey, steamGridSearchCache, steamShortcuts, userSelectedGrids, type DBFilters } from "@stores/AppState";
 import { batchApplyMessage, batchApplyProgress, batchApplyWasCancelled, showBatchApplyProgress } from "@stores/Modals";
 import { GridTypes, type GameStruct, type GridResults, type SGDBGame, type SGDBImage, type SteamShortcut } from "@types";
+import { beginRequest, isLatestRequest } from "@utils";
 import { get, type Unsubscriber } from "svelte/store";
 import { LogController } from "./utils/LogController";
 import { RustInterop } from "./utils/RustInterop";
@@ -188,13 +189,27 @@ export class CacheController {
 
   static async cacheSelectedGrid(appId: string, image: SGDBImage, localPath: string): Promise<void> {
     const type = get(gridType)
-    const selectedGrids = get(userSelectedGrids);
+
+    // Same race as setSteamGridArt (a slower call can resolve after a faster,
+    // more recent one and clobber it) - independent key/token from that
+    // function's own guard, since this one protects userSelectedGrids, not
+    // appLibraryCache. Namespaced ("selected-grid:") because this is called
+    // FROM setSteamGridArt with the same appId/gridType it uses for its own
+    // guard - an unprefixed key on the same shared map would mean this call's
+    // beginRequest() invalidates that outer token on every single call, not
+    // just genuinely superseded ones (this exact bug shipped once already).
+    const requestKey = `selected-grid:${appId}:${type}`;
+    const requestToken = beginRequest(requestKey);
+
     const imageURL = image.url.toString();
     const fileName = imageURL.substring(imageURL.lastIndexOf("/") + 1);
 
     const destPath = await path.join(this.selectedGridCacheDirPath, appId, type, fileName);
     await RustInterop.copyCachedGrid(localPath, destPath);
 
+    if (!isLatestRequest(requestKey, requestToken)) return;
+
+    const selectedGrids = get(userSelectedGrids);
     selectedGrids[appId] = selectedGrids[appId] ?? {}
     selectedGrids[appId][type] = selectedGrids[appId][type] ?? []
     selectedGrids[appId][type].push(structuredClone(image));

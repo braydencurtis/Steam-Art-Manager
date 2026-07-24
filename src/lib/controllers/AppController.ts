@@ -16,7 +16,7 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>
  */
 import { GridTypes, type ChangedPath, type LogoPinPositions, type LogoStyleOverride, type SGDBGame, type SGDBImage } from "@types";
-import { compileLogoStyleTheme, restartApp } from "@utils";
+import { beginRequest, compileLogoStyleTheme, isLatestRequest, restartApp } from "@utils";
 import { createTippy } from "svelte-tippy";
 import { get } from "svelte/store";
 import { hideAll, type Instance, type Props } from "tippy.js";
@@ -354,18 +354,39 @@ export class AppController {
 
     let imgUrl = url.toString();
     if (imgUrl.endsWith("?")) imgUrl = imgUrl.substring(0, imgUrl.length - 1);
-    
+
     const selectedGameId = get(selectedGameAppId);
     const gameName = get(selectedGameName);
     const selectedGridType = get(gridType);
-    const gameImages = get(appLibraryCache);
+
+    // getGridImage()'s latency varies wildly (cache hit vs a real network
+    // download), so promise resolution order can differ from click order -
+    // without this, a slower first pick can resolve after a faster second
+    // pick and silently clobber it. The token check below drops any request
+    // that a newer one has since superseded, so only the latest click's
+    // result is ever written, regardless of which finishes first.
+    // Namespaced ("grid:") so this never collides with cacheSelectedGrid's own
+    // guard below - that call reuses this same selectedGameId/selectedGridType,
+    // and an unprefixed key would mean its beginRequest() invalidates this
+    // token on every single call, not just genuinely superseded ones.
+    const requestKey = `grid:${selectedGameId}:${selectedGridType}`;
+    const requestToken = beginRequest(requestKey);
 
     const localPath = await CacheController.getGridImage(id, imgUrl);
-    
+
     if (localPath) {
       if (get(cacheSelectedGrids)) {
         await CacheController.cacheSelectedGrid(get(selectedGameAppId), image, localPath);
       }
+
+      if (!isLatestRequest(requestKey, requestToken)) {
+        LogController.log(`Skipped stale ${selectedGridType} write for ${gameName} (${selectedGameId}); a newer selection was made.`);
+        return;
+      }
+
+      // Re-fetched here (not before the awaits above) so this doesn't discard
+      // any other write that landed on the store while this call was pending.
+      const gameImages = get(appLibraryCache);
 
       if (!gameImages[selectedGameId]) {
         // @ts-ignore
@@ -373,7 +394,7 @@ export class AppController {
       }
 
       gameImages[selectedGameId][selectedGridType] = localPath;
-      
+
       if (get(currentPlatform) === Platforms.NON_STEAM && selectedGridType === GridTypes.ICON) {
         const shortcuts = get(steamShortcuts);
         const shortcut = shortcuts.find((s) => s.appid.toString() === selectedGameId)!;
