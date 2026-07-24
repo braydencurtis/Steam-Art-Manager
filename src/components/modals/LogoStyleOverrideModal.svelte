@@ -2,15 +2,12 @@
   import { AppController, LogController } from "@controllers";
   import { TriangleExclamation } from "@icons";
   import { Button, DropDown, NumberInput, Toggle } from "@interactables";
-  import { appLibraryCache, logoStyleDomSelectors, logoStyleOverrides, logoStyleShadowStyle, logoStyleThemeCssPath, manualSteamGames, nonSteamGames, selectedGameAppId, steamGames, steamLogoPositions, unfilteredLibraryCache } from "@stores/AppState";
+  import { logoStyleDomSelectors, logoStyleOverrides, logoStyleShadowStyle, logoStyleThemeCssPath, manualSteamGames, nonSteamGames, selectedGameAppId, steamGames, steamLogoPositions } from "@stores/AppState";
   import { showLogoStyleOverrideModal } from "@stores/Modals";
-  import { convertFileSrc } from "@tauri-apps/api/core";
   import { writeTextFile } from "@tauri-apps/plugin-fs";
   import type { AnchorPosition, LogoStyleOverride } from "@types";
-  import { compileLogoStyleTheme, debounce, IMAGE_FADE_OPTIONS } from "@utils";
+  import { compileLogoStyleTheme, debounce } from "@utils";
   import { get } from "svelte/store";
-  import { onMount } from "svelte";
-  import { fade } from "svelte/transition";
   import ModalBody from "./modal-utils/ModalBody.svelte";
 
   /**
@@ -74,8 +71,6 @@
 
   $: games = [ ...$steamGames, ...$manualSteamGames, ...$nonSteamGames ];
   $: game = games.find((game) => game.appid.toString() === $selectedGameAppId)!;
-  let heroPath = "";
-  let logoPath = "";
 
   let open = true;
 
@@ -101,31 +96,6 @@
   $: hasNativeLogoPosition = $steamLogoPositions[$selectedGameAppId]?.logoPosition.pinnedPosition !== undefined
     && $steamLogoPositions[$selectedGameAppId]?.logoPosition.pinnedPosition !== "REMOVE";
 
-  const widths = {
-    "Hero": 59.75,
-    "Logo": 12.5
-  };
-
-  const heights = {
-    "Hero": 21.375,
-    "Logo": 25.125
-  };
-
-  /**
-   * Gets the preview alignment for the given anchor.
-   * @param anchorPos The anchor to align the preview to.
-   */
-  function getPreviewAlign(anchorPos: AnchorPosition): { justifyContent: string, alignItems: string } {
-    return {
-      justifyContent: anchorPos.includes("Left") ? "flex-start" : anchorPos.includes("Right") ? "flex-end" : "center",
-      alignItems: anchorPos.includes("Top") ? "flex-start" : anchorPos.includes("Bottom") ? "flex-end" : "center",
-    };
-  }
-
-  $: previewAlign = getPreviewAlign(anchor);
-  $: previewTransform = hasPosition ? `translate(${offsetX}px, ${offsetY}px)` : "none";
-  $: previewFilter = shadow ? $logoStyleShadowStyle : "none";
-
   $: { shadow; hasPosition; anchor; offsetX; offsetY; debouncedLiveWrite(); }
 
   /**
@@ -149,44 +119,10 @@
     AppController.clearLogoStyleOverride($selectedGameAppId);
     onClose();
   }
-
-  onMount(() => {
-    if ($appLibraryCache[$selectedGameAppId]?.Hero) {
-      if ($appLibraryCache[$selectedGameAppId].Hero === "REMOVE") {
-        const heroImagePath = $unfilteredLibraryCache[$selectedGameAppId].Hero;
-        heroPath = heroImagePath ? convertFileSrc(heroImagePath) : "";
-      } else {
-        heroPath = convertFileSrc($appLibraryCache[$selectedGameAppId].Hero);
-      }
-    } else {
-      heroPath = "";
-    }
-
-    if ($appLibraryCache[$selectedGameAppId]?.Logo) {
-      if ($appLibraryCache[$selectedGameAppId].Logo === "REMOVE") {
-        const logoImagePath = $unfilteredLibraryCache[$selectedGameAppId].Logo;
-        logoPath = logoImagePath ? convertFileSrc(logoImagePath) : "";
-      } else {
-        logoPath = convertFileSrc($appLibraryCache[$selectedGameAppId].Logo);
-      }
-    }
-  });
 </script>
 
 <ModalBody title={`Set Logo Style for ${game?.name}`} open={open} on:close={() => open = false} on:closeEnd={onClose}>
   <div class="content">
-    <div class="view">
-      <div class="hero-cont">
-        <div class="img" class:missing-background={heroPath === ""} style="max-height: {heights.Hero}rem;">
-          {#if heroPath !== ""}
-            <img src="{heroPath}" alt="Hero image for {game?.name}" style="max-width: {widths.Hero}rem; max-height: {heights.Hero}rem; width: auto; height: auto;" />
-          {/if}
-        </div>
-      </div>
-      <div class="logo-cont" style="justify-content: {previewAlign.justifyContent}; align-items: {previewAlign.alignItems};">
-        <img in:fade={IMAGE_FADE_OPTIONS} src="{logoPath}" alt="Logo image for {game?.name}" style="max-height: {heights.Logo}%; max-width: {widths.Logo}%; width: auto; height: auto; transform: {previewTransform}; filter: {previewFilter};" />
-      </div>
-    </div>
     {#if hasNativeLogoPosition}
       <div class="warning">
         <TriangleExclamation style="height: 0.875rem; width: 0.875rem; fill: var(--warning); flex-shrink: 0;" />
@@ -218,48 +154,17 @@
 <style>
   .content {
     min-width: 12.5rem;
-    min-height: calc(100% - 1.25rem);
 
     display: flex;
     flex-direction: column;
-    justify-content: space-between;
-  }
+    gap: 0.625rem;
 
-  .view {
-    width: 100%;
-    position: relative;
-    margin: 0.625rem 0;
-
-    display: flex;
-  }
-
-  .logo-cont {
-    position: absolute;
-    display: flex;
-    width: 100%;
-    height: 100%;
-  }
-
-  .hero-cont > .img {
-    border-radius: 0.125rem;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-  }
-
-  .missing-background {
-    width: 59.75rem;
-    height: 21.375rem;
-    border-radius: 0.125rem;
-    background-color: #a3a3a3;
-    background-image: linear-gradient(140deg, #adadad 0%, #727272 50%, #535353 75%);
+    padding-top: 0.625rem;
   }
 
   .warning {
     width: calc(100% - 1.25rem);
-    margin: 0rem 0.625rem 0.625rem;
+    margin: 0rem 0.625rem;
     padding: 0.5rem;
 
     display: flex;
@@ -285,7 +190,7 @@
 
   .buttons {
     width: calc(100% - 1.25rem);
-    padding: 0rem 0.625rem;
+    padding: 0rem 0.625rem 0.625rem;
 
     display: flex;
     align-items: center;
