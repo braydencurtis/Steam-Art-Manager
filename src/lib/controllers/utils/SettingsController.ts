@@ -113,8 +113,17 @@ export class SettingsController {
       for (const [ key, val ] of defEntries) {
         if (!curKeys.includes(key)) {
           current[key] = val;
-        } else if (typeof val === "object" && !Array.isArray(val)) {
-          current[key] = recursivelySetNew(val, current[key]);
+        } else if (typeof val === "object" && val !== null && !Array.isArray(val)) {
+          // A field's shape can change across versions (e.g. a setting that used
+          // to be a string becoming a structured object) - if the stored value is
+          // no longer an object itself, recursing into it would throw (assigning
+          // a property to a primitive under strict mode) or silently corrupt data.
+          // Fall back to the current default wholesale in that case instead.
+          if (typeof current[key] === "object" && current[key] !== null && !Array.isArray(current[key])) {
+            current[key] = recursivelySetNew(val, current[key]);
+          } else {
+            current[key] = structuredClone(val);
+          }
         }
       }
 
