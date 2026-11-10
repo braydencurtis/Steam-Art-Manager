@@ -14,7 +14,6 @@ const OTHER_SHADOW_STYLE: LogoShadowStyle = {
 
 const SELECTORS: LogoStyleDomSelectors = {
   outerBoxSelector: "OUTER_CLASS",
-  innerWrapperSelector: "INNER_CLASS",
 };
 
 describe("compileLogoStyleTheme", () => {
@@ -254,14 +253,16 @@ describe("compileLogoStyleTheme", () => {
     expect(css).toContain("top: 100% !important;");
   });
 
-  it("never emits inner-wrapper flex-alignment CSS anywhere in the output", () => {
+  it("never aligns with flex keywords, which cannot express a continuous x/y", () => {
+    // Guards the a441a98 decision: flex alignment encodes only the three classic
+    // anchor points per axis, so continuous x/y rules it out. Positioning is done
+    // with left/top plus a matching translate, on both the outer box and the img.
     const overrides: Record<string, LogoStyleOverride> = {
       "42": { shadow: SHADOW_STYLE, position: { x: 50, y: 50 } },
     };
 
     const css = compileLogoStyleTheme(overrides, SELECTORS);
 
-    expect(css).not.toContain("INNER_CLASS");
     expect(css).not.toContain("align-items");
     expect(css).not.toContain("justify-content");
     expect(css).not.toContain("display: flex");

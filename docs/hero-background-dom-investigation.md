@@ -1,6 +1,6 @@
 # Hero/Background Image DOM Investigation
 
-Manual DevTools investigation of Steam Big Picture Mode's hero/background image element, following the same `chrome://inspect` workflow used to discover the logo's selectors (see `gemini-code-1784762951853.md`). Findings as of 2026-07-23, for issue #10, to seed default DOM Selector values for the background CSS generation work (issue #14).
+Manual DevTools investigation of Steam Big Picture Mode's hero/background image element, following the same `chrome://inspect` workflow used to discover the logo's selectors (see `docs/logo-dom-investigation.md`). Findings as of 2026-07-23, for issue #10, to seed default DOM Selector values for the background CSS generation work (issue #14).
 
 ## Element structure
 

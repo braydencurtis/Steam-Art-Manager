@@ -66,16 +66,14 @@ export type LogoShadowStyle = {
  */
 export type LogoStyleDomSelectors = {
   outerBoxSelector: string,
-  innerWrapperSelector: string,
 };
 
 /**
  * Defaults discovered via manual DevTools inspection, documented in
- * gemini-code-1784762951853.md, as of the time this feature was built.
+ * docs/logo-dom-investigation.md, as of the time this feature was built.
  */
 export const DEFAULT_LOGO_STYLE_DOM_SELECTORS: LogoStyleDomSelectors = {
   outerBoxSelector: "_2Eh7Soh97QONu_grMi2m66",
-  innerWrapperSelector: "_2DVdg_N1qLNDdnxJqN-RBX",
 };
 
 export const DEFAULT_LOGO_SHADOW_STYLE: LogoShadowStyle = {

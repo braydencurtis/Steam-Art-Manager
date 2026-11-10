@@ -25,3 +25,5 @@ dist-ssr
 *.sln
 *.sw?
 target
+# Local agent skills/tooling, not part of the project
+.agents/

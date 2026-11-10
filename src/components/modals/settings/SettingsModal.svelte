@@ -255,15 +255,6 @@
   }
 
   /**
-   * Function to run on DOM inner wrapper selector change.
-   * @param value The updated value.
-   */
-  function onDomInnerSelectorChange(value: string): void {
-    domSelectorsSetting = { ...domSelectorsSetting, innerWrapperSelector: value };
-    canSave = true;
-  }
-
-  /**
    * Opens the app's log directory.
    */
   async function openLogDirectory() {
@@ -419,14 +410,6 @@
           canBeEmpty
           placeholder={"e.g. _2Eh7Soh97QONu_grMi2m66"}
           onChange={onDomOuterSelectorChange}
-        />
-        <TextFieldEntry
-          label="Logo Inner Wrapper Selector"
-          description={"The CSS class-name fragment of Steam's logo inner image wrapper element. Update this if a Steam client update breaks your Logo Style Overrides."}
-          value={domSelectorsSetting.innerWrapperSelector}
-          canBeEmpty
-          placeholder={"e.g. _2DVdg_N1qLNDdnxJqN-RBX"}
-          onChange={onDomInnerSelectorChange}
         />
       </div>
     </div>
