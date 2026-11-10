@@ -61,6 +61,9 @@ function compileGameRules(appid: string, override: LogoStyleOverride, domSelecto
 
   const blocks: string[] = [];
   const imgProps: string[] = [];
+  // Position and size both drive `transform` on the img, so they accumulate here
+  // and are emitted as one declaration - a second `transform` would overwrite the first.
+  const imgTransforms: string[] = [];
 
   if (override.position) {
     const { x, y }: LogoPositionOverride = override.position;
@@ -77,6 +80,22 @@ function compileGameRules(appid: string, override: LogoStyleOverride, domSelecto
       "}",
     ].join("\n"));
 
+    // Anchoring the outer box is necessary but not sufficient. Confirmed against
+    // the live Steam DOM (CDP, Big Picture): the img is `position: absolute` at
+    // `left: 0` inside a wrapper far wider than it (648px wrapper, 406px logo),
+    // and its own box is already exactly logo-sized - height comes from the
+    // wrapper, width from the intrinsic aspect ratio. So the box travelled to the
+    // requested anchor and the logo stayed pinned to the box's left edge, short by
+    // the 242px of slack inside: x=100 nowhere near the right edge, x=50 left of
+    // centre. Giving the img the same left/translate pair makes the two compose to
+    // `logoLeft = x% * (containerWidth - logoWidth)`, i.e. flush left at 0, truly
+    // centred at 50, flush right at 100. Verified at x = 0/25/50/75/100.
+    // `right: auto` guards the pair against a theme that insets the img on both edges.
+    imgProps.push(`  left: ${x}% !important;`, "  right: auto !important;");
+    imgTransforms.push(`translateX(${negX}%)`);
+
+    // Kept, though it is inert in the DOM shape observed: `object-fit: contain` has
+    // no letterboxing slack when the img box already matches the logo's aspect.
     imgProps.push(`  object-position: ${x}% ${y}% !important;`, "  margin: 0 !important;");
   }
 
@@ -95,7 +114,12 @@ function compileGameRules(appid: string, override: LogoStyleOverride, domSelecto
     const originX = override.position?.x ?? 50;
     const originY = override.position?.y ?? 50;
 
-    imgProps.push(`  transform-origin: ${originX}% ${originY}% !important;`, `  transform: scale(${override.size.scale / 100}) !important;`);
+    imgProps.push(`  transform-origin: ${originX}% ${originY}% !important;`);
+    imgTransforms.push(`scale(${override.size.scale / 100})`);
+  }
+
+  if (imgTransforms.length > 0) {
+    imgProps.push(`  transform: ${imgTransforms.join(" ")} !important;`);
   }
 
   if (imgProps.length > 0) {

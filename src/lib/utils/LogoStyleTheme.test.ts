@@ -18,6 +18,62 @@ const SELECTORS: LogoStyleDomSelectors = {
 };
 
 describe("compileLogoStyleTheme", () => {
+
+  it("anchors the img itself, not only the outer box, so x maps to where the logo lands", () => {
+    // Verified against the live Steam DOM over CDP: the img is position:absolute
+    // at left:0 inside a wrapper much wider than it (648px vs 406px), so anchoring
+    // only the outer box left the logo short by that 242px of slack at every x.
+    // The img needs the same left/translateX pair; the two then compose to
+    // logoLeft = x% * (containerWidth - logoWidth).
+    const overrides: Record<string, LogoStyleOverride> = {
+      "2909400": { position: { x: 100, y: 50 } },
+    };
+
+    const css = compileLogoStyleTheme(overrides, SELECTORS);
+
+    expect(css).toContain("left: 100% !important;");
+    expect(css).toContain("transform: translate(-100%, -50%) !important;");
+    expect(css).toContain("right: auto !important;");
+    expect(css).toContain("transform: translateX(-100%) !important;");
+  });
+
+  it("emits x=0 as a non-negative translate on the img", () => {
+    const overrides: Record<string, LogoStyleOverride> = {
+      "2909400": { position: { x: 0, y: 0 } },
+    };
+
+    const css = compileLogoStyleTheme(overrides, SELECTORS);
+
+    expect(css).toContain("transform: translateX(0%) !important;");
+    expect(css).not.toContain("translateX(-0%)");
+  });
+
+  it("combines position and size into one img transform rather than letting size overwrite it", () => {
+    // Two `transform` declarations in one rule means the last wins - emitting them
+    // separately would silently drop the positioning translate for any game that
+    // also has a custom size.
+    const overrides: Record<string, LogoStyleOverride> = {
+      "2909400": { position: { x: 100, y: 50 }, size: { scale: 150 } },
+    };
+
+    const css = compileLogoStyleTheme(overrides, SELECTORS);
+
+    expect(css).toContain("transform: translateX(-100%) scale(1.5) !important;");
+    expect(css).toContain("transform-origin: 100% 50% !important;");
+    expect(css.match(/transform: translateX/g)).toHaveLength(1);
+  });
+
+  it("still emits a bare scale when size is set without position", () => {
+    const overrides: Record<string, LogoStyleOverride> = {
+      "2909400": { size: { scale: 75 } },
+    };
+
+    const css = compileLogoStyleTheme(overrides, SELECTORS);
+
+    expect(css).toContain("transform: scale(0.75) !important;");
+    expect(css).toContain("transform-origin: 50% 50% !important;");
+    expect(css).not.toContain("translateX");
+  });
   it("emits nothing for an empty override map", () => {
     const css = compileLogoStyleTheme({}, SELECTORS);
 
@@ -136,7 +192,9 @@ describe("compileLogoStyleTheme", () => {
 
     expect(imgRule).toContain("object-position: 0% 100% !important;");
     expect(imgRule).toContain("transform-origin: 0% 100% !important;");
-    expect(imgRule).toContain("transform: scale(1.5) !important;");
+    // Position now contributes a translateX to the same transform, so scale
+    // composes with it instead of being the whole declaration.
+    expect(imgRule).toContain("transform: translateX(0%) scale(1.5) !important;");
   });
 
   it("defaults transform-origin to center when size is set with no position override", () => {
@@ -225,8 +283,11 @@ describe("compileLogoStyleTheme", () => {
 
       expect(css).toContain(`left: ${x}% !important;`);
       expect(css).toContain(`top: ${y}% !important;`);
-      expect(css).not.toContain("right:");
+      // x/y positions purely via left/top - never the right/bottom offsets the
+      // pre-a441a98 anchor system used. `right: auto` is a reset, not an offset:
+      // it stops a both-edges inset from fighting the img's left/translateX pair.
       expect(css).not.toContain("bottom:");
+      expect(css.replace(/right: auto !important;/g, "")).not.toContain("right:");
     }
   });
 
